@@ -74,12 +74,16 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     plt.scatter(num_threads_debug, avg_times_debug, color='#007acc', marker='o', s=30, zorder=3)
     plt.scatter(num_threads_release, avg_times_release, color='#ff7f0e', marker='x', s=30, zorder=3)
 
+    # Add thin error bars
+    plt.errorbar(num_threads_debug, avg_times_debug, yerr=std_devs_debug, fmt='none', ecolor='#007aff', elinewidth=0.5, capsize=3, alpha=0.3, zorder=2)
+    plt.errorbar(num_threads_release, avg_times_release, yerr=std_devs_release, fmt='none', ecolor='#ff7000', elinewidth=0.5, capsize=3, alpha=0.3, zorder=2)
+
     plt.xlabel("Number of Threads", fontsize=12, fontweight='bold')
     plt.ylabel("Execution Time (seconds)", fontsize=12, fontweight='bold')
     plt.title(f"Execution Time vs. Number of Threads ({project_name})", fontsize=14, fontweight='bold')
 
     plt.legend(fontsize=10, loc='upper left', frameon=True, shadow=True)
-    plt.grid(True, linestyle='--', alpha=0.7)  # Add a subtle grid
+    plt.grid(True, linestyle='--', alpha=0.7)
 
     # Customize tick parameters
     plt.tick_params(axis='both', which='major', labelsize=10, direction='inout', length=6, width=1)
@@ -97,6 +101,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     plt.close()
 
     print(f"Benchmark chart saved to: {output_filename}")
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python mac_bench.py <project_name>")
