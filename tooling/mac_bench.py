@@ -68,7 +68,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     plt.tight_layout()
 
     # --- Save the plot ---
-    output_filename = os.path.join(benchmark_dir, f"{project_name}_benchmark.png")
+    output_filename = os.path.join(benchmark_dir, f"{project_name}.png")
     plt.savefig(output_filename, bbox_inches='tight')
     plt.close()
 
@@ -81,9 +81,9 @@ if __name__ == "__main__":
 
     project_name = sys.argv[1]
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    num_threads_list = [1, 2, 4, 8, 16]
-    debug_output_file = f"{project_name}_debug_results.txt"
-    release_output_file = f"{project_name}_release_results.txt"
+    num_threads_list = [1, 2, 4, 8, 12, 16, 20, 24, 28, 32]
+    debug_output_file = f"{project_name}_debug.txt"
+    release_output_file = f"{project_name}_release.txt"
 
     # Define the benchmark directory
     benchmark_dir = os.path.abspath(os.path.join(script_dir, "..", "benchmark"))
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     # Create the benchmark directory if it doesn't exist
     os.makedirs(benchmark_dir, exist_ok=True)
 
-    # Clean previous results in the benchmark directory (optional)
+    # Clean previous results in the benchmark directory
     debug_file_path = os.path.join(benchmark_dir, debug_output_file)
     release_file_path = os.path.join(benchmark_dir, release_output_file)
     if os.path.exists(debug_file_path):
