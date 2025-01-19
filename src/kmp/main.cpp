@@ -19,23 +19,23 @@ void program() {
     }
 }
 
-int measure(char* argv[]) {
+int measure(const char* const argv[]) {
     int num_threads = std::stoi(argv[1]);
     std::string output_file = argv[2];
 
     omp_set_num_threads(num_threads);
 
-    const int warmups = 5; // Number of warm-up runs
-    const int runs = 10; // Number of measurement runs
+    const int warmups = 5;
+    const int runs = 10;
 
     std::vector<double> execution_times;
 
-    // Warm-up phase
+    // Warm-up
     for (int i = 0; i < warmups; ++i) {
         program();
     }
 
-    // Measurement phase
+    // Measurement
     for (int i = 0; i < runs; ++i) {
         double start_time = omp_get_wtime();
         program();
@@ -51,7 +51,7 @@ int measure(char* argv[]) {
     double sq_sum = std::inner_product(execution_times.begin(), execution_times.end(), execution_times.begin(), 0.0);
     double stdev = std::sqrt(sq_sum / execution_times.size() - average * average);
 
-    // Write the output to the specified file
+    // Write output to file
     std::ofstream outfile(output_file, std::ios::app);
     if (outfile.is_open()) {
         outfile << num_threads << " "
