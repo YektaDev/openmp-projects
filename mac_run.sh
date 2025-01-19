@@ -12,7 +12,7 @@ echo -e "${GREEN}Compiling the OpenMP project into the debug binary for the curr
 mkdir -p build
 
 clang++ \
-  -std=c++26 \
+  -std=c++23 \
   -Xclang \
   -fopenmp \
   -L/opt/homebrew/opt/libomp/lib \

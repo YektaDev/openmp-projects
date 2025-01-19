@@ -2,14 +2,9 @@
 #include <iostream>
 
 int main() {
-#pragma omp parallel
+#pragma omp parallel num_threads(4)
     {
-        auto lang = "C++";
-        std::cout << "Hello and welcome to " << lang << "!\n";
-
-        for (int i = 1; i <= 5; i++) {
-            std::cout << "i = " << i << std::endl;
-        }
+        std::cout << "Hello and welcome\n";
     }
     return 0;
 }

@@ -12,7 +12,7 @@ echo -e "${GREEN}Compiling the OpenMP project into the release binary for the cu
 mkdir -p build
 
 clang++ \
-  -std=c++26 \
+  -std=c++23 \
   -O3 -march=native \
   -Xclang \
   -fopenmp \
