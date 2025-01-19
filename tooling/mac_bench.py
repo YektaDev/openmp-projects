@@ -16,22 +16,39 @@ def run_experiment(project_name, build_script, executable_name, num_threads_list
 def plot_results(project_name, debug_file, release_file, benchmark_dir):
     """Plots the results and saves the chart as a high-quality PNG."""
     def read_data(data_file):
+        if not os.path.exists(data_file):
+            print(f"Warning: Data file not found: {data_file}")
+            return [], [], [], [], []
+
         num_threads = []
-        execution_times = []
+        avg_times = []
+        min_times = []
+        max_times = []
+        std_devs = []
         with open(data_file, "r") as f:
             for line in f:
                 parts = line.split()
-                if len(parts) == 2:
+                if len(parts) == 5:
                     num_threads.append(int(parts[0]))
-                    execution_times.append(float(parts[1]))
-        return num_threads, execution_times
+                    avg_times.append(float(parts[1]))
+                    min_times.append(float(parts[2]))
+                    max_times.append(float(parts[3]))
+                    std_devs.append(float(parts[4]))
+        return num_threads, avg_times, min_times, max_times, std_devs
 
-    num_threads_debug, execution_times_debug = read_data(debug_file)
-    num_threads_release, execution_times_release = read_data(release_file)
+    num_threads_debug, avg_times_debug, min_times_debug, max_times_debug, std_devs_debug = read_data(debug_file)
+    num_threads_release, avg_times_release, min_times_release, max_times_release, std_devs_release = read_data(release_file)
 
+    if not num_threads_debug or not num_threads_release:
+        print("Skipping plot due to missing data.")
+        return
+
+    # --- Styling for a more beautiful chart ---
     plt.figure(figsize=(12, 7), dpi=300)  # Customize figure size and DPI
-    plt.plot(num_threads_debug, execution_times_debug, marker='o', linestyle='-', color='#007acc', label='Debug')  # Blue for debug
-    plt.plot(num_threads_release, execution_times_release, marker='x', linestyle='--', color='#ff7f0e', label='Release')  # Orange for release
+
+    # Plot with error bars (using standard deviation)
+    plt.errorbar(num_threads_debug, avg_times_debug, yerr=std_devs_debug, fmt='-o', color='#007acc', label='Debug', capsize=5)
+    plt.errorbar(num_threads_release, avg_times_release, yerr=std_devs_release, fmt='-x', color='#ff7f0e', label='Release', capsize=5)
 
     plt.xlabel("Number of Threads", fontsize=12, fontweight='bold')
     plt.ylabel("Execution Time (seconds)", fontsize=12, fontweight='bold')
@@ -59,7 +76,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python mac_bench.py <project_name>")
+        print("Usage: python mac_plot.py <project_name>")
         sys.exit(1)
 
     project_name = sys.argv[1]
