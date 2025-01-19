@@ -76,7 +76,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python mac_plot.py <project_name>")
+        print("Usage: python mac_bench.py <project_name>")
         sys.exit(1)
 
     project_name = sys.argv[1]
