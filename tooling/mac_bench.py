@@ -2,6 +2,8 @@ import subprocess
 import matplotlib.pyplot as plt
 import os
 import sys
+import numpy as np
+from scipy.interpolate import make_interp_spline
 
 def run_experiment(project_name, build_script, executable_name, num_threads_list, output_file, script_dir, benchmark_dir):
     """Runs the experiment for a given build and executable."""
@@ -43,12 +45,34 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
         print("Skipping plot due to missing data.")
         return
 
+    # --- Create smooth curves using spline interpolation ---
+    num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)  # Use same x-values for debug and release
+    spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=3)
+    avg_times_smooth_debug = spline_debug(num_threads_smooth)
+
+    spline_release = make_interp_spline(num_threads_release, avg_times_release, k=3)
+    avg_times_smooth_release = spline_release(num_threads_smooth)
+
+    # Interpolate standard deviations to match the smooth curve
+    spline_std_dev_debug = make_interp_spline(num_threads_debug, std_devs_debug, k=3)
+    std_devs_smooth_debug = spline_std_dev_debug(num_threads_smooth)
+
+    spline_std_dev_release = make_interp_spline(num_threads_release, std_devs_release, k=3)
+    std_devs_smooth_release = spline_std_dev_release(num_threads_smooth)
+
     # --- Styling for a more beautiful chart ---
     plt.figure(figsize=(12, 7), dpi=300)  # Customize figure size and DPI
 
-    # Plot with error bars (using standard deviation)
-    plt.errorbar(num_threads_debug, avg_times_debug, yerr=std_devs_debug, fmt='-o', color='#007acc', label='Debug', capsize=5)
-    plt.errorbar(num_threads_release, avg_times_release, yerr=std_devs_release, fmt='-x', color='#ff7f0e', label='Release', capsize=5)
+    # Plot smooth curves with error regions (using standard deviation)
+    plt.plot(num_threads_smooth, avg_times_smooth_debug, color='#007acc', label='Debug', linewidth=2)
+    plt.fill_between(num_threads_smooth, avg_times_smooth_debug - std_devs_smooth_debug, avg_times_smooth_debug + std_devs_smooth_debug, alpha=0.2, color='#007acc')
+
+    plt.plot(num_threads_smooth, avg_times_smooth_release, color='#ff7f0e', label='Release', linewidth=2)
+    plt.fill_between(num_threads_smooth, avg_times_smooth_release - std_devs_smooth_release, avg_times_smooth_release + std_devs_smooth_release, alpha=0.2, color='#ff7f0e')
+
+    # Add markers at original data points
+    plt.scatter(num_threads_debug, avg_times_debug, color='#007acc', marker='o', s=30, zorder=3)
+    plt.scatter(num_threads_release, avg_times_release, color='#ff7f0e', marker='x', s=30, zorder=3)
 
     plt.xlabel("Number of Threads", fontsize=12, fontweight='bold')
     plt.ylabel("Execution Time (seconds)", fontsize=12, fontweight='bold')
@@ -73,7 +97,6 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     plt.close()
 
     print(f"Benchmark chart saved to: {output_filename}")
-
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python mac_bench.py <project_name>")
