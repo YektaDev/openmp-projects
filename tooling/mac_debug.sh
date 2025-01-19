@@ -23,7 +23,7 @@ fi
 
 echo -e "${GREEN}Compiling the OpenMP project '$project_name' into the debug binary for the current macOS machine...${NC}"
 
-build_dir="build/$project_name"
+build_dir="${script_path}/../build/$project_name"
 mkdir -p "$build_dir"
 
 clang++ \
