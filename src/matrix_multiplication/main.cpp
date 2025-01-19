@@ -4,6 +4,13 @@
 #include <iomanip>
 #include <fstream>
 
+void program() {
+    // sample computation
+    for (int i = 0; i < 1000000; ++i) {
+        double temp = i * 0.5;
+    }
+}
+
 int main(int argc, char* argv[]) {
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
@@ -17,13 +24,9 @@ int main(int argc, char* argv[]) {
 
     double start_time = omp_get_wtime();
 
-    #pragma omp parallel default(none)
+#pragma omp parallel default(none)
     {
-        for (int i = 0; i < 1000000; ++i) {
-            double temp = i * 0.5;
-        }
-        // Remove or comment out the following line:
-        // std::cout << "Hello from thread " << omp_get_thread_num() << " of " << omp_get_num_threads() << "\n";
+        program();
     }
 
     double end_time = omp_get_wtime();
@@ -38,6 +41,5 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: Could not open output file " << output_file << std::endl;
         return 1;
     }
-
     return 0;
 }
