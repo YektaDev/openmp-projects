@@ -6,20 +6,57 @@
 #include <numeric> // std::accumulate
 #include <algorithm> // std::min & std::max
 
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+// Function to multiply two matrices
+vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const vector<vector<int> > &matrixB) {
+    const int rowsA = matrixA.size();
+    const int colsA = matrixA[0].size();
+    const int rowsB = matrixB.size();
+    const int colsB = matrixB[0].size();
+
+    // Check for compatibility
+    if (colsA != rowsB) {
+        cout << "Error: Matrices are incompatible for multiplication." << endl;
+        return {}; // Return an empty matrix to indicate an error
+    }
+
+    // Initialize the result matrix with zeros
+    vector<vector<int> > resultMatrix(rowsA, vector<int>(colsB, 0));
+
+    // Perform the matrix multiplication
+    for (int i = 0; i < rowsA; ++i) {
+        for (int j = 0; j < colsB; ++j) {
+            for (int k = 0; k < colsA; ++k) {
+                resultMatrix[i][j] += matrixA[i][k] * matrixB[k][j];
+            }
+        }
+    }
+
+    return resultMatrix;
+}
+
 void program() {
-    #pragma omp parallel default(none)
-    {
-        // Your parallel code here...
-        // Make sure to use appropriate clauses (shared, private, firstprivate)
-        // Example (assuming you have a loop to parallelize):
-        #pragma omp for
-        for (int i = 0; i < 1000000; ++i) {
-            // ... do some work ...
+    vector<vector<int> > matrixA = {{1, 2, 3}, {4, 5, 6}};
+    vector<vector<int> > matrixB = {{7, 8}, {9, 10}, {11, 12}};
+    vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
+
+    // Print the result
+    if (!result.empty()) {
+        cout << "Resultant Matrix:" << endl;
+        for (const auto &row: result) {
+            for (int val: row) {
+                cout << val << " ";
+            }
+            cout << endl;
         }
     }
 }
 
-int measure(const char* const argv[]) {
+int measure(const char *const argv[]) {
     int num_threads = std::stoi(argv[1]);
     std::string output_file = argv[2];
 
@@ -67,7 +104,7 @@ int measure(const char* const argv[]) {
     return 0;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
         return 1;
