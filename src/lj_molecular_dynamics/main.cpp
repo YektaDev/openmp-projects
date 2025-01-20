@@ -22,7 +22,7 @@
  *                   300 Pompton Road
  *                   Wayne NJ 07470
  * ---------------------------------------------------------------------------------------------------------------------
- * Refactored & Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
+ * Reborn, Refactored, and Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
  * ---------------------------------------------------------------------------------------------------------------------
  */
 
@@ -40,7 +40,7 @@ using namespace std;
 // Number of particles
 int N;
 
-//  Lennard-Jones parameters in natural units!
+// Lennard-Jones parameters in natural units!
 double sigma = 1.;
 double epsilon = 1.;
 double m = 1.;
@@ -49,52 +49,55 @@ double kB = 1.;
 double NA = 6.022140857e23;
 double kBSI = 1.38064852e-23; // m^2*kg/(s^2*K)
 
-//  Size of box, which will be specified in natural units
+// Size of box, which will be specified in natural units
 double L;
 
-//  Initial Temperature in Natural Units
+// Initial Temperature in Natural Units
 double Tinit; //2;
-//  Vectors!
+// Vectors!
 //
 constexpr int MAXPART = 5001;
-//  Position
+// Position
 double r[MAXPART][3];
-//  Velocity
+// Velocity
 double v[MAXPART][3];
-//  Acceleration
+// Acceleration
 double a[MAXPART][3];
-//  Force
+// Force
 double F[MAXPART][3];
 
 // atom type
 char atype[10];
-//  Function prototypes
-//  initialize positions on simple cubic lattice, also calls function to initialize velocities
+// Function prototypes
+// initialize positions on simple cubic lattice, also calls function to initialize velocities
 void initialize();
 
-//  update positions and velocities using Velocity Verlet algorithm
-//  print particle coordinates to file for rendering via VMD or other animation software
-//  return 'instantaneous pressure'
+// update positions and velocities using Velocity Verlet algorithm
+// print particle coordinates to file for rendering via VMD or other animation software
+// return 'instantaneous pressure'
 double VelocityVerlet(double dt, int iter);
 
-//  Compute Force using F = -dV/dr
-//  solve F = ma for use in Velocity Verlet
+// Compute Force using F = -dV/dr
+// solve F = ma for use in Velocity Verlet
 void computeAccelerations();
 
-//  Numerical Recipes function for generation gaussian distribution
+// Numerical Recipes function for generation gaussian distribution
 double gaussdist();
 
-//  Initialize velocities according to user-supplied initial Temperature (Tinit)
+// Initialize velocities according to user-supplied initial Temperature (Tinit)
 void initializeVelocities();
 
-//  Compute total potential energy from particle coordinates
+// Compute total potential energy from particle coordinates
 double Potential();
 
-//  Compute mean squared velocity from particle velocities
+// Compute mean squared velocity from particle velocities
 double MeanSquaredVelocity();
 
-//  Compute total kinetic energy from particle mass and velocities
+// Compute total kinetic energy from particle mass and velocities
 double Kinetic();
+
+// Forward declaration of the function
+int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt);
 
 void program() {
     double Temp, Press, Pavg, Tavg, rho;
@@ -128,10 +131,10 @@ void program() {
         exit(0);
     }
 
-    //  Check to see if the volume makes sense - is it too small?
-    //  Remember VDW radius of the particles is 1 natural unit of length
-    //  and volume = L*L*L, so if V = N*L*L*L = N, then all the particles
-    //  will be initialized with an interparticle separation equal to 2xVDW radius
+    // Check to see if the volume makes sense - is it too small?
+    // Remember VDW radius of the particles is 1 natural unit of length
+    // and volume = L*L*L, so if V = N*L*L*L = N, then all the particles
+    // will be initialized with an interparticle separation equal to 2xVDW radius
     if (Vol < N) {
         printf("\n\n\n  YOUR DENSITY IS VERY HIGH!\n\n");
         printf("  THE NUMBER OF PARTICLES IS %i AND THE AVAILABLE VOLUME IS %f NATURAL UNITS\n", N, Vol);
@@ -145,18 +148,18 @@ void program() {
 
     // dt in natural units of time s.t. in SI it is 5 f.s. for all other gasses
     constexpr double dt = 0.5e-14 / timefac;
-    //  We will run the simulation for NumTime timesteps.
-    //  The total time will be NumTime*dt in natural units
-    //  And NumTime*dt multiplied by the appropriate conversion factor for time in seconds
+    // We will run the simulation for NumTime timesteps.
+    // The total time will be NumTime*dt in natural units
+    // And NumTime*dt multiplied by the appropriate conversion factor for time in seconds
     constexpr int NumTime = 2000;
 
-    //  Put all the atoms in simple crystal lattice and give them random velocities
-    //  that corresponds to the initial temperature we have specified
+    // Put all the atoms in simple crystal lattice and give them random velocities
+    // that corresponds to the initial temperature we have specified
     initialize();
 
-    //  Based on their positions, calculate the ininial intermolecular forces
-    //  The accellerations of each particle will be defined from the forces and their
-    //  mass, and this will allow us to update their positions via Newton's law
+    // Based on their positions, calculate the ininial intermolecular forces
+    // The accellerations of each particle will be defined from the forces and their
+    // mass, and this will allow us to update their positions via Newton's law
     computeAccelerations();
 
     Pavg = 0;
@@ -167,10 +170,10 @@ void program() {
         Press = VelocityVerlet(dt, i + 1);
         Press *= PressFac;
 
-        //  Now we would like to calculate somethings about the system:
-        //  Instantaneous mean velocity squared, Temperature, Pressure
-        //  Potential, and Kinetic Energy
-        //  We would also like to use the IGL to try to see if we can extract the gas constant
+        // Now we would like to calculate somethings about the system:
+        // Instantaneous mean velocity squared, Temperature, Pressure
+        // Potential, and Kinetic Energy
+        // We would also like to use the IGL to try to see if we can extract the gas constant
         mvs = MeanSquaredVelocity();
         KE = Kinetic();
         PE = Potential();
@@ -194,6 +197,7 @@ void program() {
     Tavg /= NumTime;
     Z = Pavg * (Vol * VolFac) / (N * kBSI * Tavg);
     gc = NA * Pavg * (Vol * VolFac) / (N * Tavg);
+    write_output(Pavg, Tavg, Z, gc, Vol, N, timefac, dt);
 }
 
 void initialize() {
@@ -203,12 +207,12 @@ void initialize() {
     // Number of atoms in each direction
     n = int(ceil(pow(N, 1.0 / 3)));
 
-    //  spacing between atoms along a given direction
+    // spacing between atoms along a given direction
     pos = L / n;
 
-    //  index for number of particles assigned positions
+    // index for number of particles assigned positions
     p = 0;
-    //  initialize positions
+    // initialize positions
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
             for (k = 0; k < n; k++) {
@@ -226,7 +230,7 @@ void initialize() {
     initializeVelocities();
 }
 
-//  Function to calculate the averaged velocity squared
+// Function to calculate the averaged velocity squared
 double MeanSquaredVelocity() {
     double vx2 = 0;
     double vy2 = 0;
@@ -245,10 +249,8 @@ double MeanSquaredVelocity() {
     return v2;
 }
 
-//  Function to calculate the kinetic energy of the system
+// Function to calculate the kinetic energy of the system
 double Kinetic() {
-    //Write Function here!
-
     double v2, kin;
 
     kin = 0.;
@@ -292,10 +294,9 @@ double Potential() {
     return Pot;
 }
 
-
-//   Uses the derivative of the Lennard-Jones potential to calculate
-//   the forces on each atom. Then uses a = F/m to calculate the
-//   accelleration of each atom.
+//  Uses the derivative of the Lennard-Jones potential to calculate
+//  the forces on each atom. Then uses a = F/m to calculate the
+//  accelleration of each atom.
 void computeAccelerations() {
     int i, j, k;
     double f, rSqd;
@@ -315,16 +316,16 @@ void computeAccelerations() {
             rSqd = 0;
 
             for (k = 0; k < 3; k++) {
-                //  component-by-componenent position of i relative to j
+                // component-by-componenent position of i relative to j
                 rij[k] = r[i][k] - r[j][k];
-                //  sum of squares of the components
+                // sum of squares of the components
                 rSqd += rij[k] * rij[k];
             }
 
-            //  From derivative of Lennard-Jones with sigma and epsilon set equal to 1 in natural units!
+            // From derivative of Lennard-Jones with sigma and epsilon set equal to 1 in natural units!
             f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
             for (k = 0; k < 3; k++) {
-                //  from F = ma, where m = 1 in natural units!
+                // from F = ma, where m = 1 in natural units!
 #pragma omp atomic
                 a[i][k] += rij[k] * f;
 #pragma omp atomic
@@ -340,9 +341,9 @@ double VelocityVerlet(double dt, int iter) {
 
     double psum = 0.;
 
-    //  Compute accelerations from forces at current position
+    // Compute accelerations from forces at current position
     computeAccelerations();
-    //  Update positions and velocity with current velocity and acceleration
+    // Update positions and velocity with current velocity and acceleration
     //printf("  Updated Positions!\n");
 #pragma omp parallel for private(j)
     for (i = 0; i < N; i++) {
@@ -353,9 +354,9 @@ double VelocityVerlet(double dt, int iter) {
         }
         //printf("  %i  %6.4e   %6.4e   %6.4e\n",i,r[i][0],r[i][1],r[i][2]);
     }
-    //  Update accellerations from updated positions
+    // Update accellerations from updated positions
     computeAccelerations();
-    //  Update velocity with updated acceleration
+    // Update velocity with updated acceleration
 #pragma omp parallel for private(j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
@@ -378,27 +379,15 @@ double VelocityVerlet(double dt, int iter) {
         }
     }
 
-    /* Commented by me
-    for (i=0; i<N; i++) {
-      fprintf(fp,"%s",atype);
-      for (j=0; j<3; j++) {
-        fprintf(fp,"  %12.10e ",r[i][j]);
-      }
-      fprintf(fp,"\n");
-    }
-    //fprintf(fp,"\n \n");
-    */
-
     return psum / (6 * L * L);
 }
-
 
 void initializeVelocities() {
     int i, j;
 
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
-            //  Pull a number from a Gaussian Distribution
+            // Pull a number from a Gaussian Distribution
             v[i][j] = gaussdist();
         }
     }
@@ -413,21 +402,20 @@ void initializeVelocities() {
         }
     }
 
-
     for (i = 0; i < 3; i++) vCM[i] /= N * m;
 
-    //  Subtract out the center-of-mass velocity from the
-    //  velocity of each particle... effectively set the
-    //  center of mass velocity to zero so that the system does
-    //  not drift in space!
+    // Subtract out the center-of-mass velocity from the
+    // velocity of each particle... effectively set the
+    // center of mass velocity to zero so that the system does
+    // not drift in space!
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             v[i][j] -= vCM[j];
         }
     }
 
-    //  Now we want to scale the average velocity of the system
-    //  by a factor which is consistent with our initial temperature, Tinit
+    // Now we want to scale the average velocity of the system
+    // by a factor which is consistent with our initial temperature, Tinit
     double vSqdSum, lambda;
     vSqdSum = 0.;
     for (i = 0; i < N; i++) {
@@ -445,8 +433,7 @@ void initializeVelocities() {
     }
 }
 
-
-//  Numerical recipes Gaussian distribution number generator
+// Numerical recipes Gaussian distribution number generator
 double gaussdist() {
     static bool available = false;
     static double gset;
@@ -513,6 +500,38 @@ int measure(const int num_threads, const string &output_file) {
     return 0;
 }
 
+int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt) {
+    constexpr double VolFac = 3.7949992920124995e-29;
+    constexpr int NumTime = 2000;
+    if (ofstream outfile("simulation_output.txt"); outfile.is_open()) {
+        outfile << "\n  AVERAGE TEMPERATURE (K):                 " << fixed << setprecision(5) << Tavg;
+        outfile << "\n  AVERAGE PRESSURE  (Pa):                  " << fixed << setprecision(5) << Pavg;
+        outfile << "\n  PV/nT (J * mol^-1 K^-1):                 " << fixed << setprecision(5) << gc;
+        outfile << "\n  PERCENT ERROR of pV/nT AND GAS CONSTANT: " << fixed << setprecision(5)
+                << 100 * fabs(gc - 8.3144598) / 8.3144598;
+        outfile << "\n  THE COMPRESSIBILITY (unitless):          " << fixed << setprecision(5) << Z;
+        outfile << "\n  TOTAL VOLUME (m^3):                      " << fixed << setprecision(5) << Vol * VolFac;
+        outfile << "\n  NUMBER OF PARTICLES (unitless):          " << N;
+        outfile << "\n  TOTAL TIME (s):                          " << fixed << setprecision(4) << NumTime * dt * timefac
+                << "\n";
+        outfile.close();
+        cout << "\n  AVERAGE TEMPERATURE (K):                 " << fixed << setprecision(5) << Tavg;
+        cout << "\n  AVERAGE PRESSURE  (Pa):                  " << fixed << setprecision(5) << Pavg;
+        cout << "\n  PV/nT (J * mol^-1 K^-1):                 " << fixed << setprecision(5) << gc;
+        cout << "\n  PERCENT ERROR of pV/nT AND GAS CONSTANT: " << fixed << setprecision(5)
+                << 100 * fabs(gc - 8.3144598) / 8.3144598;
+        cout << "\n  THE COMPRESSIBILITY (unitless):          " << fixed << setprecision(5) << Z;
+        cout << "\n  TOTAL VOLUME (m^3):                      " << fixed << setprecision(5) << Vol * VolFac;
+        cout << "\n  NUMBER OF PARTICLES (unitless):          " << N;
+        cout << "\n  TOTAL TIME (s):                          " << fixed << setprecision(4) << NumTime * dt * timefac <<
+                "\n";
+    } else {
+        cerr << "Error: Could not open output file simulation_output.txt" << endl;
+        return 1;
+    }
+    return 0;
+}
+
 int main(const int argc, char *argv[]) {
     if (argc != 3) {
         cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
@@ -522,7 +541,8 @@ int main(const int argc, char *argv[]) {
     try {
         const int num_threads = stoi(argv[1]);
         const string output_file = argv[2];
-        return measure(num_threads, output_file);
+        measure(num_threads, output_file);
+        return 0;
     } catch (const exception &e) {
         cerr << "Error: Invalid input arguments: " << e.what() << endl;
         return 1;
