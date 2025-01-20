@@ -55,13 +55,17 @@ void program() {
     try {
         const vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
 
-        // Print the result if no exception was thrown
-        cout << "Resultant Matrix:" << endl;
-        for (const auto &row: result) {
-            for (const int val: row) {
-                cout << val << " ";
+        if (const size_t elements = result.size() * result[0].size(); elements < 100) {
+            // Print the result if no exception was thrown
+            cout << "Resultant Matrix:" << endl;
+            for (const auto &row: result) {
+                for (const int val: row) {
+                    cout << val << " ";
+                }
+                cout << endl;
             }
-            cout << endl;
+        } else {
+            cout << "Resultant Matrix Size: " << elements << endl;
         }
     } catch (const runtime_error &error) {
         cerr << error.what() << endl;
