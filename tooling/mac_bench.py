@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import numpy as np
-from scipy.interpolate import make_interp_spline
+from scipy.interpolate import make_interp_spline, CubicSpline
 
 THREADS_NUM = [1, 2, 4, 8, 16, 24, 32]
 
@@ -47,23 +47,25 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
         print("Skipping plot due to missing data.")
         return
 
-    # --- Create smooth curves using spline interpolation ---
-    num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)  # Use same x-values for debug and release
-    spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=3)
-    avg_times_smooth_debug = spline_debug(num_threads_smooth)
+    # Create smooth curves using CubicSpline
+    # Use CubicSpline instead of make_interp_spline for more localized control
+    cs_debug = CubicSpline(num_threads_debug, avg_times_debug)
+    cs_release = CubicSpline(num_threads_release, avg_times_release)
 
-    spline_release = make_interp_spline(num_threads_release, avg_times_release, k=3)
-    avg_times_smooth_release = spline_release(num_threads_smooth)
+    num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)
 
-    # Interpolate standard deviations to match the smooth curve
-    spline_std_dev_debug = make_interp_spline(num_threads_debug, std_devs_debug, k=3)
-    std_devs_smooth_debug = spline_std_dev_debug(num_threads_smooth)
+    avg_times_smooth_debug = cs_debug(num_threads_smooth)
+    avg_times_smooth_release = cs_release(num_threads_smooth)
 
-    spline_std_dev_release = make_interp_spline(num_threads_release, std_devs_release, k=3)
-    std_devs_smooth_release = spline_std_dev_release(num_threads_smooth)
+    # Interpolate standard deviations
+    cs_std_dev_debug = CubicSpline(num_threads_debug, std_devs_debug)
+    cs_std_dev_release = CubicSpline(num_threads_release, std_devs_release)
 
-    # --- Styling for a more beautiful chart ---
-    plt.figure(figsize=(12, 7), dpi=300)  # Customize figure size and DPI
+    std_devs_smooth_debug = cs_std_dev_debug(num_threads_smooth)
+    std_devs_smooth_release = cs_std_dev_release(num_threads_smooth)
+
+    # Customize figure size and DPI
+    plt.figure(figsize=(12, 7), dpi=300)
 
     # Plot smooth curves with error regions (using standard deviation)
     plt.plot(num_threads_smooth, avg_times_smooth_debug, color='#007acc', label='Debug', linewidth=2)
@@ -89,11 +91,10 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
 
     # Customize tick parameters
     plt.tick_params(axis='both', which='major', labelsize=10, direction='inout', length=6, width=1)
-    # --- Use threads for x-ticks ---
+    # Use threads for x-ticks
     plt.xticks(THREADS_NUM)
-    # --- Calculate y-tick positions ---
-    y_min = 0  # Or min(min(avg_times_smooth_debug), min(avg_times_smooth_release))
-    y_max = max(max(avg_times_smooth_debug), max(avg_times_smooth_release))  # Consider both debug and release
+    y_min = 0 # Can also be: min(min(avg_times_smooth_debug), min(avg_times_smooth_release))
+    y_max = max(max(avg_times_smooth_debug), max(avg_times_smooth_release))
     num_y_ticks = 10
     # Calculate the step value to get exactly num_y_ticks
     y_step = (y_max - y_min) / (num_y_ticks - 1)
@@ -108,7 +109,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     # Tight layout to minimize whitespace
     plt.tight_layout()
 
-    # --- Save the plot ---
+    # Save the plot
     output_filename = os.path.join(benchmark_dir, f"{project_name}.png")
     plt.savefig(output_filename, bbox_inches='tight')
     plt.close()
@@ -125,9 +126,7 @@ if __name__ == "__main__":
     debug_output_file = f"{project_name}_debug.txt"
     release_output_file = f"{project_name}_release.txt"
 
-    # Define the benchmark directory
     benchmark_dir = os.path.abspath(os.path.join(script_dir, "..", "benchmark"))
-
     # Create the benchmark directory if it doesn't exist
     os.makedirs(benchmark_dir, exist_ok=True)
 
