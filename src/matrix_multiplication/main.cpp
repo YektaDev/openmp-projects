@@ -71,8 +71,8 @@ void program() {
 int measure(const int num_threads, const string &output_file) {
     omp_set_num_threads(num_threads);
 
-    constexpr int warmups = 5;
-    constexpr int runs = 10;
+    constexpr int warmups = 3;
+    constexpr int runs = 8;
 
     vector<double> exec_times;
 
