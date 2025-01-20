@@ -22,7 +22,7 @@
  *                   300 Pompton Road
  *                   Wayne NJ 07470
  * ---------------------------------------------------------------------------------------------------------------------
- * Reborn, Refactored, and Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
+ * REBORN, Refactored, and Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
  * ---------------------------------------------------------------------------------------------------------------------
  */
 
@@ -102,9 +102,8 @@ int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int 
                  const string &ofn);
 
 void program() {
-    double Temp, Press, Pavg, Tavg, rho;
-    double KE, PE, mvs, gc, Z;
-    char trash[10000], prefix[1000], tfn[1000], ofn[1000], afn[1000];
+    double gc, Z;
+    char prefix[1000], tfn[1000], ofn[1000], afn[1000];
 
     strcpy(prefix, "output");
     strcpy(tfn, prefix);
@@ -128,13 +127,12 @@ void program() {
     // The number of density in moles.
     // Ideal gas: 40 moles/m^3
     // Liquid Argon At 1ATM and 87K: ~35000 moles/m^3
-    rho = 40;
+    constexpr double rho = 40;
     const double Vol = (N / (rho * NA)) / VolFac;
 
     // Limiting N to MAXPART for practical reasons
-    if (N >= MAXPART) {
-        printf("\n\n\n  MAXIMUM NUMBER OF PARTICLES IS %i\n\n  PLEASE ADJUST YOUR INPUT FILE ACCORDINGLY \n\n",
-               MAXPART);
+    if constexpr (N >= MAXPART) {
+        printf("\n\n  MAXIMUM NUMBER OF PARTICLES IS %i\n\n  PLEASE ADJUST YOUR INPUT FILE ACCORDINGLY \n\n", MAXPART);
         exit(0);
     }
 
@@ -169,8 +167,8 @@ void program() {
     // mass, and this will allow us to update their positions via Newton's law
     computeAccelerations();
 
-    Pavg = 0;
-    Tavg = 0;
+    double Pavg = 0;
+    double Tavg = 0;
 
     // Open ofn here
     ofstream ofp(ofn);
@@ -181,21 +179,20 @@ void program() {
     ofp <<
             "   time (s)            T(t) (K)             P(t) (Pa)           Kinetic En. (n.u.)     Potential En. (n.u.) Total En. (n.u.)\n";
 
-    int tenp = floor(NumTime / 10);
     for (int i = 0; i < NumTime + 1; i++) {
-        Press = VelocityVerlet(dt, i + 1);
+        double Press = VelocityVerlet(dt, i + 1);
         Press *= PressFac;
 
         // Now we would like to calculate somethings about the system:
         // Instantaneous mean velocity squared, Temperature, Pressure
         // Potential, and Kinetic Energy
         // We would also like to use the IGL to try to see if we can extract the gas constant
-        mvs = MeanSquaredVelocity();
-        KE = Kinetic();
-        PE = Potential();
+        const double mvs = MeanSquaredVelocity();
+        const double KE = Kinetic();
+        const double PE = Potential();
 
         // Temperature from Kinetic Theory
-        Temp = m * mvs / (3 * kB) * TempFac;
+        const double Temp = m * mvs / (3 * kB) * TempFac;
 
         // Instantaneous gas constant and compressibility - not well defined because
         // pressure may be zero in some instances because there will be zero wall collisions,
@@ -226,21 +223,16 @@ void program() {
 }
 
 void initialize() {
-    int n, p, i, j, k;
-    double pos;
-
     // Number of atoms in each direction
-    n = int(ceil(pow(N, 1.0 / 3)));
-
+    const int n = static_cast<int>(ceil(pow(N, 1.0 / 3)));
     // spacing between atoms along a given direction
-    pos = L / n;
-
+    const double pos = L / n;
     // index for number of particles assigned positions
-    p = 0;
+    int p = 0;
     // initialize positions
-    for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) {
-            for (k = 0; k < n; k++) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < n; k++) {
                 if (p < N) {
                     r[p][0] = (i + 0.5) * pos;
                     r[p][1] = (j + 0.5) * pos;
@@ -250,7 +242,6 @@ void initialize() {
             }
         }
     }
-
     // Call function to initialize velocities
     initializeVelocities();
 }
@@ -260,7 +251,6 @@ double MeanSquaredVelocity() {
     double vx2 = 0;
     double vy2 = 0;
     double vz2 = 0;
-    double v2;
 
 #pragma omp parallel for reduction(+:vx2,vy2,vz2)
     for (int i = 0; i < N; i++) {
@@ -268,20 +258,16 @@ double MeanSquaredVelocity() {
         vy2 = vy2 + v[i][1] * v[i][1];
         vz2 = vz2 + v[i][2] * v[i][2];
     }
-    v2 = (vx2 + vy2 + vz2) / N;
-
-    //printf("  Average of x-component of velocity squared is %f\n",v2);
-    return v2;
+    // Average of x-component of velocity squared
+    return (vx2 + vy2 + vz2) / N;
 }
 
 // Function to calculate the kinetic energy of the system
 double Kinetic() {
-    double v2, kin;
-
-    kin = 0.;
+    double kin = 0.;
 #pragma omp parallel for reduction(+:kin) private(v2)
     for (int i = 0; i < N; i++) {
-        v2 = 0.;
+        double v2 = 0.;
         for (int j = 0; j < 3; j++) {
             v2 += v[i][j] * v[i][j];
         }
@@ -294,22 +280,19 @@ double Kinetic() {
 
 // Function to calculate the potential energy of the system
 double Potential() {
-    double quot, r2, rnorm, term1, term2, Pot;
-    int i, j, k;
-
-    Pot = 0.;
+    double Pot = 0.;
 #pragma omp parallel for reduction(+:Pot) private(r2, rnorm, quot, term1, term2)
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < N; j++) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
             if (j != i) {
-                r2 = 0.;
-                for (k = 0; k < 3; k++) {
+                double r2 = 0.;
+                for (int k = 0; k < 3; k++) {
                     r2 += (r[i][k] - r[j][k]) * (r[i][k] - r[j][k]);
                 }
-                rnorm = sqrt(r2);
-                quot = sigma / rnorm;
-                term1 = pow(quot, 12.);
-                term2 = pow(quot, 6.);
+                const double rnorm = sqrt(r2);
+                const double quot = sigma / rnorm;
+                const double term1 = pow(quot, 12.);
+                const double term2 = pow(quot, 6.);
 
                 Pot += 4 * epsilon * (term1 - term2);
             }
@@ -323,8 +306,7 @@ double Potential() {
 //  the forces on each atom. Then uses a = F/m to calculate the
 //  accelleration of each atom.
 void computeAccelerations() {
-    int i, j, k;
-    double f, rSqd;
+    int i, k;
     double rij[3]; // position of i relative to j
 
     for (i = 0; i < N; i++) {
@@ -336,9 +318,9 @@ void computeAccelerations() {
 #pragma omp parallel for private(j, rSqd, rij, f)
     for (i = 0; i < N - 1; i++) {
         // loop over all distinct pairs i,j
-        for (j = i + 1; j < N; j++) {
+        for (int j = i + 1; j < N; j++) {
             // initialize r^2 to zero
-            rSqd = 0;
+            double rSqd = 0;
 
             for (k = 0; k < 3; k++) {
                 // component-by-componenent position of i relative to j
@@ -348,7 +330,7 @@ void computeAccelerations() {
             }
 
             // From derivative of Lennard-Jones with sigma and epsilon set equal to 1 in natural units!
-            f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
+            const double f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
             for (k = 0; k < 3; k++) {
                 // from F = ma, where m = 1 in natural units!
 #pragma omp atomic
@@ -462,15 +444,15 @@ void initializeVelocities() {
 double gaussdist() {
     static bool available = false;
     static double gset;
-    double fac, rsq, v1, v2;
     if (!available) {
+        double rsq, v1, v2;
         do {
             v1 = 2.0 * rand() / double(RAND_MAX) - 1.0;
             v2 = 2.0 * rand() / double(RAND_MAX) - 1.0;
             rsq = v1 * v1 + v2 * v2;
         } while (rsq >= 1.0 || rsq == 0.0);
 
-        fac = sqrt(-2.0 * log(rsq) / rsq);
+        double fac = sqrt(-2.0 * log(rsq) / rsq);
         gset = v1 * fac;
         available = true;
 
