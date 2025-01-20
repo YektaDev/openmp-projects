@@ -6,8 +6,6 @@
 #include <numeric> // std::accumulate
 #include <algorithm> // std::min & std::max
 
-using namespace std;
-
 void program() {
     #pragma omp parallel default(none)
     {
@@ -48,8 +46,8 @@ int measure(const char *const argv[]) {
     // Calculate statistics
     const double sum = std::accumulate(execution_times.begin(), execution_times.end(), 0.0);
     const double average = sum / execution_times.size();
-    const double min_time = *ranges::min_element(execution_times);
-    const double max_time = *ranges::max_element(execution_times);
+    const double min_time = *std::ranges::min_element(execution_times);
+    const double max_time = *std::ranges::max_element(execution_times);
     const double sq_sum = std::inner_product(execution_times.begin(), execution_times.end(), execution_times.begin(), 0.0);
     const double stdev = std::sqrt(sq_sum / execution_times.size() - average * average);
 
