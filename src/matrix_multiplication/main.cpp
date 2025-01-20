@@ -10,22 +10,32 @@ using namespace std;
 
 // Function to multiply two matrices
 vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const vector<vector<int> > &matrixB) {
+    // 1. Get Dimensions and Validate Compatibility
     const int rowsA = matrixA.size();
     const int colsA = matrixA[0].size();
     const int rowsB = matrixB.size();
     const int colsB = matrixB[0].size();
 
-    // Check for compatibility
     if (colsA != rowsB) {
-        cout << "Error: Matrices are incompatible for multiplication." << endl;
-        return {}; // Return an empty matrix to indicate an error
+        throw runtime_error("Error: Matrices are incompatible for multiplication. "
+            "Columns of the first matrix must equal rows of the second.");
     }
 
-    // Initialize the result matrix with zeros
+    // 2. Initialize the Result Matrix
     vector<vector<int> > resultMatrix(rowsA, vector<int>(colsB, 0));
 
-    // Perform the matrix multiplication
-    for (int i = 0; i < rowsA; ++i) {
+    // 3. Perform the Matrix Multiplication (Core Logic) with OpenMP
+
+    //   - Parallelize the outer loop using OpenMP.
+    //   - The 'i' loop iterates over the rows of 'resultMatrix'.
+    //   - Each thread will handle a different set of rows.
+    //   - `schedule(static)` divides the iterations among threads in a static manner,
+    //     which is generally suitable for this type of regular computation.
+    //   - `private(j, k)` ensures that each thread has its own private copies of the loop indices
+    //      'j' and 'k', preventing race conditions.
+
+#pragma omp parallel for schedule(static) private(j, k)
+    for (int i = 0; i < rowsA; i++) {
         for (int j = 0; j < colsB; ++j) {
             for (int k = 0; k < colsA; ++k) {
                 resultMatrix[i][j] += matrixA[i][k] * matrixB[k][j];
@@ -33,23 +43,28 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
         }
     }
 
+    // 4. Return the Result
     return resultMatrix;
 }
 
 void program() {
-    vector<vector<int> > matrixA = {{1, 2, 3}, {4, 5, 6}};
-    vector<vector<int> > matrixB = {{7, 8}, {9, 10}, {11, 12}};
-    vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
+    const vector<vector<int> > matrixA = {{1, 2, 3}, {4, 5, 6}};
+    const vector<vector<int> > matrixB = {{7, 8}, {9, 10}, {11, 12}};
 
-    // Print the result
-    if (!result.empty()) {
+    // Call multiplyMatrices() within a try-catch block to handle potential errors
+    try {
+        const vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
+
+        // Print the result if no exception was thrown
         cout << "Resultant Matrix:" << endl;
         for (const auto &row: result) {
-            for (int val: row) {
+            for (const int val: row) {
                 cout << val << " ";
             }
             cout << endl;
         }
+    } catch (const runtime_error &error) {
+        cerr << error.what() << endl;
     }
 }
 
