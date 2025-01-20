@@ -57,13 +57,13 @@ void program() {
 }
 
 int measure(const char *const argv[]) {
-    int num_threads = std::stoi(argv[1]);
-    std::string output_file = argv[2];
+    const int num_threads = std::stoi(argv[1]);
+    const std::string output_file = argv[2];
 
     omp_set_num_threads(num_threads);
 
-    const int warmups = 5;
-    const int runs = 10;
+    constexpr int warmups = 5;
+    constexpr int runs = 10;
 
     std::vector<double> execution_times;
 
@@ -74,23 +74,22 @@ int measure(const char *const argv[]) {
 
     // Measurement
     for (int i = 0; i < runs; ++i) {
-        double start_time = omp_get_wtime();
+        const double start_time = omp_get_wtime();
         program();
-        double end_time = omp_get_wtime();
+        const double end_time = omp_get_wtime();
         execution_times.push_back(end_time - start_time);
     }
 
     // Calculate statistics
-    double sum = std::accumulate(execution_times.begin(), execution_times.end(), 0.0);
-    double average = sum / execution_times.size();
-    double min_time = *std::min_element(execution_times.begin(), execution_times.end());
-    double max_time = *std::max_element(execution_times.begin(), execution_times.end());
-    double sq_sum = std::inner_product(execution_times.begin(), execution_times.end(), execution_times.begin(), 0.0);
-    double stdev = std::sqrt(sq_sum / execution_times.size() - average * average);
+    const double sum = std::accumulate(execution_times.begin(), execution_times.end(), 0.0);
+    const double average = sum / execution_times.size();
+    const double min_time = *ranges::min_element(execution_times);
+    const double max_time = *ranges::max_element(execution_times);
+    const double sq_sum = std::inner_product(execution_times.begin(), execution_times.end(), execution_times.begin(), 0.0);
+    const double stdev = std::sqrt(sq_sum / execution_times.size() - average * average);
 
     // Write output to file
-    std::ofstream outfile(output_file, std::ios::app);
-    if (outfile.is_open()) {
+    if (std::ofstream outfile(output_file, std::ios::app); outfile.is_open()) {
         outfile << num_threads << " "
                 << std::fixed << std::setprecision(6) << average << " "
                 << std::fixed << std::setprecision(6) << min_time << " "
