@@ -5,6 +5,7 @@
 #include <fstream>
 #include <numeric> // accumulate
 #include <algorithm> // min & max
+#include <random> // mt19937
 
 using namespace std;
 
@@ -29,15 +30,14 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
     //   - Parallelize the outer loop using OpenMP.
     //   - The 'i' loop iterates over the rows of 'resultMatrix'.
     //   - Each thread will handle a different set of rows.
-    //   - `schedule(static)` divides the iterations among threads in a static manner,
-    //     which is generally suitable for this type of regular computation.
+    //   - `schedule(static)` divides the iterations among threads in a static manner.
     //   - `private(j, k)` ensures that each thread has its own private copies of the loop indices
     //      'j' and 'k', preventing race conditions.
 
-#pragma omp parallel for schedule(static) private(j, k)
+#pragma omp parallel for schedule(static)
     for (int i = 0; i < rowsA; i++) {
-        for (int j = 0; j < colsB; ++j) {
-            for (int k = 0; k < colsA; ++k) {
+        for (int j = 0; j < colsB; j++) {
+            for (int k = 0; k < colsA; k++) {
                 resultMatrix[i][j] += matrixA[i][k] * matrixB[k][j];
             }
         }
@@ -47,9 +47,25 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
     return resultMatrix;
 }
 
+vector<vector<int> > generateMatrix(int rows, int cols, int seed) {
+    // A random number generator engine with the given seed
+    mt19937 generator(seed);
+    // A uniform distribution between a suitable range (e.g., 1 to 100)
+    uniform_int_distribution<int> distribution(1, 100);
+    vector<vector<int> > matrix(rows, vector<int>(cols));
+    // Fill the matrix with random numbers
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            matrix[i][j] = distribution(generator);
+        }
+    }
+    return matrix;
+}
+
+
 void program() {
-    const vector<vector<int> > matrixA = {{1, 2, 3}, {4, 5, 6}};
-    const vector<vector<int> > matrixB = {{7, 8}, {9, 10}, {11, 12}};
+    const vector<vector<int> > matrixA = generateMatrix(2048, 64, 20482048);
+    const vector<vector<int> > matrixB = generateMatrix(64, 4096, 40964096);
 
     // Call multiplyMatrices() within a try-catch block to handle potential errors
     try {
