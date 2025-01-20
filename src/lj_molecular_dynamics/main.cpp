@@ -22,7 +22,7 @@
  *                   300 Pompton Road
  *                   Wayne NJ 07470
  * ---------------------------------------------------------------------------------------------------------------------
- * REBORN, Refactored, and Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
+ * REBORN, Refactored, and Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025 - Disclaimer: I don't like this code.
  * ---------------------------------------------------------------------------------------------------------------------
  */
 
