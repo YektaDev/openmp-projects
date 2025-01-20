@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import os
 import sys
 import numpy as np
-from scipy.interpolate import make_interp_spline, CubicSpline
+from scipy.interpolate import make_interp_spline
 
-THREADS_NUM = [1, 2, 4, 8, 16, 24, 32]
+THREAD_NUMS = [1, 2, 4, 7, 10, 14, 20]
 
 def run_experiment(project_name, build_script, executable_name, num_threads_list, output_file, script_dir, benchmark_dir):
     """Runs the experiment for a given build and executable."""
@@ -52,19 +52,19 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     cs_debug = CubicSpline(num_threads_debug, avg_times_debug)
     cs_release = CubicSpline(num_threads_release, avg_times_release)
 
+    # Create smooth curves using spline interpolation
     num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)
+    spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=3)
+    avg_times_smooth_debug = spline_debug(num_threads_smooth)
+    spline_release = make_interp_spline(num_threads_release, avg_times_release, k=3)
+    avg_times_smooth_release = spline_release(num_threads_smooth)
+    # Interpolate standard deviations to match the smooth curve
+    spline_std_dev_debug = make_interp_spline(num_threads_debug, std_devs_debug, k=3)
+    std_devs_smooth_debug = spline_std_dev_debug(num_threads_smooth)
+    spline_std_dev_release = make_interp_spline(num_threads_release, std_devs_release, k=3)
+    std_devs_smooth_release = spline_std_dev_release(num_threads_smooth)
 
-    avg_times_smooth_debug = cs_debug(num_threads_smooth)
-    avg_times_smooth_release = cs_release(num_threads_smooth)
-
-    # Interpolate standard deviations
-    cs_std_dev_debug = CubicSpline(num_threads_debug, std_devs_debug)
-    cs_std_dev_release = CubicSpline(num_threads_release, std_devs_release)
-
-    std_devs_smooth_debug = cs_std_dev_debug(num_threads_smooth)
-    std_devs_smooth_release = cs_std_dev_release(num_threads_smooth)
-
-    # Customize figure size and DPI
+    # Styling for a more beautiful chart
     plt.figure(figsize=(12, 7), dpi=300)
 
     # Plot smooth curves with error regions (using standard deviation)
@@ -92,7 +92,7 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     # Customize tick parameters
     plt.tick_params(axis='both', which='major', labelsize=10, direction='inout', length=6, width=1)
     # Use threads for x-ticks
-    plt.xticks(THREADS_NUM)
+    plt.xticks(THREAD_NUMS)
     y_min = 0 # Can also be: min(min(avg_times_smooth_debug), min(avg_times_smooth_release))
     y_max = max(max(avg_times_smooth_debug), max(avg_times_smooth_release))
     num_y_ticks = 10
@@ -138,7 +138,7 @@ if __name__ == "__main__":
     if os.path.exists(release_file_path):
         os.remove(release_file_path)
 
-    run_experiment(project_name, "mac_debug.sh", "main-debug", THREADS_NUM, debug_output_file, script_dir, benchmark_dir)
-    run_experiment(project_name, "mac_release.sh", "main-release", THREADS_NUM, release_output_file, script_dir, benchmark_dir)
+    run_experiment(project_name, "mac_debug.sh", "main-debug", THREAD_NUMS, debug_output_file, script_dir, benchmark_dir)
+    run_experiment(project_name, "mac_release.sh", "main-release", THREAD_NUMS, release_output_file, script_dir, benchmark_dir)
 
     plot_results(project_name, debug_file_path, release_file_path, benchmark_dir)
