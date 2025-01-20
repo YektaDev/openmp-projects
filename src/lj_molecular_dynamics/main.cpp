@@ -1,28 +1,30 @@
-/*
-  MD.c - a simple molecular dynamics program for simulating real gas properties of Lennard-Jones particles.
-
-    Copyright (C) 2016  Jonathan J. Foley IV, Chelsea Sweet, Oyewumi Akinfenwa
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-    Electronic Contact:  foleyj10@wpunj.edu
-    Mail Contact:   Prof. Jonathan Foley
-                    Department of Chemistry, William Paterson University
-                    300 Pompton Road
-                    Wayne NJ 07470
-
-*/
+/* ---------------------------------------------------------------------------------------------------------------------
+ * MD.c - a simple molecular dynamics program for simulating real gas properties of Lennard-Jones particles.
+ *
+ *   Copyright (C) 2016  Jonathan J. Foley IV, Chelsea Sweet, Oyewumi Akinfenwa
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *   Electronic Contact:  foleyj10@wpunj.edu
+ *   Mail Contact:   Prof. Jonathan Foley
+ *                   Department of Chemistry, William Paterson University
+ *                   300 Pompton Road
+ *                   Wayne NJ 07470
+ * ---------------------------------------------------------------------------------------------------------------------
+ * Refactored & Parallelized Using OpenMP - Ali Khaleqi Yekta - 2025
+ * ---------------------------------------------------------------------------------------------------------------------
+ */
 
 #include <omp.h>
 #include <iostream>
@@ -54,7 +56,7 @@ double L;
 double Tinit; //2;
 //  Vectors!
 //
-const int MAXPART = 5001;
+constexpr int MAXPART = 5001;
 //  Position
 double r[MAXPART][3];
 //  Velocity
@@ -95,18 +97,16 @@ double MeanSquaredVelocity();
 double Kinetic();
 
 void program() {
-    int i;
-    double dt, Vol, Temp, Press, Pavg, Tavg, rho;
-    double VolFac, TempFac, PressFac, timefac;
+    double Temp, Press, Pavg, Tavg, rho;
     double KE, PE, mvs, gc, Z;
     char trash[10000], prefix[1000], tfn[1000], ofn[1000], afn[1000];
 
     strcpy(prefix, "output");
 
-    VolFac = 3.7949992920124995e-29;
-    PressFac = 51695201.06691862;
-    TempFac = 142.0950000000000;
-    timefac = 2.09618e-12;
+    constexpr double VolFac = 3.7949992920124995e-29;
+    constexpr double PressFac = 51695201.06691862;
+    constexpr double TempFac = 142.0950000000000;
+    constexpr double timefac = 2.09618e-12;
     strcpy(atype, "Ar");
 
     // Initial temprature of the gas in Kelvin
@@ -119,8 +119,7 @@ void program() {
     // Liquid Argon At 1ATM and 87K: ~35000 moles/m^3
     rho = 40;
     N = 216;
-    Vol = N / (rho * NA);
-    Vol /= VolFac;
+    const double Vol = (N / (rho * NA)) / VolFac;
 
     // Limiting N to MAXPART for practical reasons
     if (N >= MAXPART) {
@@ -144,13 +143,12 @@ void program() {
     // Length of the box in natural units:
     L = pow(Vol, (1. / 3));
 
-    int NumTime;
     // dt in natural units of time s.t. in SI it is 5 f.s. for all other gasses
-    dt = 0.5e-14 / timefac;
+    constexpr double dt = 0.5e-14 / timefac;
     //  We will run the simulation for NumTime timesteps.
     //  The total time will be NumTime*dt in natural units
     //  And NumTime*dt multiplied by the appropriate conversion factor for time in seconds
-    NumTime = 2000;
+    constexpr int NumTime = 2000;
 
     //  Put all the atoms in simple crystal lattice and give them random velocities
     //  that corresponds to the initial temperature we have specified
@@ -165,7 +163,7 @@ void program() {
     Tavg = 0;
 
     int tenp = floor(NumTime / 10);
-    for (i = 0; i < NumTime + 1; i++) {
+    for (int i = 0; i < NumTime + 1; i++) {
         Press = VelocityVerlet(dt, i + 1);
         Press *= PressFac;
 
