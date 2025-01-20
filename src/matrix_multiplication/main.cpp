@@ -53,10 +53,7 @@ void program() {
     }
 }
 
-int measure(const char *const argv[]) {
-    const int num_threads = stoi(argv[1]);
-    const string output_file = argv[2];
-
+int measure(const int num_threads, const string &output_file) {
     omp_set_num_threads(num_threads);
 
     constexpr int warmups = 5;
@@ -105,5 +102,13 @@ int main(const int argc, char *argv[]) {
         cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
         return 1;
     }
-    return measure(argv);
+
+    try {
+        const int num_threads = std::stoi(argv[1]);
+        const string output_file = argv[2];
+        return measure(num_threads, output_file);
+    } catch (const std::exception &e) {
+        cerr << "Error: Invalid input arguments: " << e.what() << endl;
+        return 1;
+    }
 }
