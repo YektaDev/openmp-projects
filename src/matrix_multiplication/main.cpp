@@ -24,18 +24,17 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
 
     vector<vector<int> > resultMatrix(rowsA, vector<int>(colsB, 0));
 
-    //   - Parallelize the outer loop using OpenMP.
-    //   - The 'i' loop iterates over the rows of 'resultMatrix'.
-    //   - Each thread will handle a different set of rows.
-    //   - `schedule(static)` divides the iterations among threads in a static manner.
-    //   - `private(j, k)` ensures that each thread has its own private copies of the loop indices
-    //      'j' and 'k', preventing race conditions.
-#pragma omp parallel for schedule(static)
+    // Parallelize the outer two loops using OpenMP's collapse clause.
+#pragma omp parallel for collapse(2) schedule(static)
     for (int i = 0; i < rowsA; i++) {
         for (int j = 0; j < colsB; j++) {
+            // Use a private variable for accumulating the sum for each element.
+            int sum = 0;
             for (int k = 0; k < colsA; k++) {
-                resultMatrix[i][j] += matrixA[i][k] * matrixB[k][j];
+                sum += matrixA[i][k] * matrixB[k][j];
             }
+            // Assign the accumulated sum to the result matrix element.
+            resultMatrix[i][j] = sum;
         }
     }
 
