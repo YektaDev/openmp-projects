@@ -47,16 +47,14 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
         print("Skipping plot due to missing data.")
         return
 
-    # Create smooth curves using spline interpolation
     num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)
-    spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=3)
+    spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=1)
     avg_times_smooth_debug = spline_debug(num_threads_smooth)
-    spline_release = make_interp_spline(num_threads_release, avg_times_release, k=3)
+    spline_release = make_interp_spline(num_threads_release, avg_times_release, k=1)
     avg_times_smooth_release = spline_release(num_threads_smooth)
-    # Interpolate standard deviations to match the smooth curve
-    spline_std_dev_debug = make_interp_spline(num_threads_debug, std_devs_debug, k=3)
+    spline_std_dev_debug = make_interp_spline(num_threads_debug, std_devs_debug, k=1)
     std_devs_smooth_debug = spline_std_dev_debug(num_threads_smooth)
-    spline_std_dev_release = make_interp_spline(num_threads_release, std_devs_release, k=3)
+    spline_std_dev_release = make_interp_spline(num_threads_release, std_devs_release, k=1)
     std_devs_smooth_release = spline_std_dev_release(num_threads_smooth)
 
     # Styling for a more beautiful chart
