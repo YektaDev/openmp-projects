@@ -9,23 +9,20 @@
 
 using namespace std;
 
-// Function to multiply two matrices
+vector<vector<int> > matrixA;
+vector<vector<int> > matrixB;
+
 vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const vector<vector<int> > &matrixB) {
-    // 1. Get Dimensions and Validate Compatibility
     const int rowsA = matrixA.size();
     const int colsA = matrixA[0].size();
     const int rowsB = matrixB.size();
     const int colsB = matrixB[0].size();
-
     if (colsA != rowsB) {
         throw runtime_error("Error: Matrices are incompatible for multiplication. "
             "Columns of the first matrix must equal rows of the second.");
     }
 
-    // 2. Initialize the Result Matrix
     vector<vector<int> > resultMatrix(rowsA, vector<int>(colsB, 0));
-
-    // 3. Perform the Matrix Multiplication (Core Logic) with OpenMP
 
     //   - Parallelize the outer loop using OpenMP.
     //   - The 'i' loop iterates over the rows of 'resultMatrix'.
@@ -33,7 +30,6 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
     //   - `schedule(static)` divides the iterations among threads in a static manner.
     //   - `private(j, k)` ensures that each thread has its own private copies of the loop indices
     //      'j' and 'k', preventing race conditions.
-
 #pragma omp parallel for schedule(static)
     for (int i = 0; i < rowsA; i++) {
         for (int j = 0; j < colsB; j++) {
@@ -43,7 +39,6 @@ vector<vector<int> > multiplyMatrices(const vector<vector<int> > &matrixA, const
         }
     }
 
-    // 4. Return the Result
     return resultMatrix;
 }
 
@@ -62,11 +57,7 @@ vector<vector<int> > generateMatrix(int rows, int cols, int seed) {
     return matrix;
 }
 
-
 void program() {
-    const vector<vector<int> > matrixA = generateMatrix(2048, 64, 20482048);
-    const vector<vector<int> > matrixB = generateMatrix(64, 4096, 40964096);
-
     // Call multiplyMatrices() within a try-catch block to handle potential errors
     try {
         const vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
@@ -137,6 +128,9 @@ int main(const int argc, char *argv[]) {
         cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
         return 1;
     }
+
+    matrixA = generateMatrix(2048, 64, 20482048);
+    matrixB = generateMatrix(64, 4096, 40964096);
 
     try {
         const int num_threads = stoi(argv[1]);
