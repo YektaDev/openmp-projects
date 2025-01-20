@@ -47,11 +47,6 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
         print("Skipping plot due to missing data.")
         return
 
-    # Create smooth curves using CubicSpline
-    # Use CubicSpline instead of make_interp_spline for more localized control
-    cs_debug = CubicSpline(num_threads_debug, avg_times_debug)
-    cs_release = CubicSpline(num_threads_release, avg_times_release)
-
     # Create smooth curves using spline interpolation
     num_threads_smooth = np.linspace(min(num_threads_debug), max(num_threads_debug), 300)
     spline_debug = make_interp_spline(num_threads_debug, avg_times_debug, k=3)
