@@ -10,11 +10,11 @@
  *
  *   This program is distributed in the hope that it will be useful,
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *   GNU General Public License for more details.
  *
  *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *   along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  *   Electronic Contact:  foleyj10@wpunj.edu
  *   Mail Contact:   Prof. Jonathan Foley
@@ -38,7 +38,7 @@
 using namespace std;
 
 // Number of particles
-int N;
+constexpr int N = 216;
 
 // Lennard-Jones parameters in natural units!
 double sigma = 1.;
@@ -68,6 +68,7 @@ double F[MAXPART][3];
 
 // atom type
 char atype[10];
+
 // Function prototypes
 // initialize positions on simple cubic lattice, also calls function to initialize velocities
 void initialize();
@@ -97,7 +98,8 @@ double MeanSquaredVelocity();
 double Kinetic();
 
 // Forward declaration of the function
-int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt);
+int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt,
+                 const string &ofn);
 
 void program() {
     double Temp, Press, Pavg, Tavg, rho;
@@ -105,6 +107,12 @@ void program() {
     char trash[10000], prefix[1000], tfn[1000], ofn[1000], afn[1000];
 
     strcpy(prefix, "output");
+    strcpy(tfn, prefix);
+    strcat(tfn, "_traj.xyz");
+    strcpy(ofn, prefix);
+    strcat(ofn, "_output.txt");
+    strcpy(afn, prefix);
+    strcat(afn, "_average.txt");
 
     constexpr double VolFac = 3.7949992920124995e-29;
     constexpr double PressFac = 51695201.06691862;
@@ -121,7 +129,6 @@ void program() {
     // Ideal gas: 40 moles/m^3
     // Liquid Argon At 1ATM and 87K: ~35000 moles/m^3
     rho = 40;
-    N = 216;
     const double Vol = (N / (rho * NA)) / VolFac;
 
     // Limiting N to MAXPART for practical reasons
@@ -165,6 +172,15 @@ void program() {
     Pavg = 0;
     Tavg = 0;
 
+    // Open ofn here
+    ofstream ofp(ofn);
+    if (!ofp.is_open()) {
+        cerr << "Error: Could not open output file " << ofn << endl;
+        return;
+    }
+    ofp <<
+            "   time (s)            T(t) (K)             P(t) (Pa)           Kinetic En. (n.u.)     Potential En. (n.u.) Total En. (n.u.)\n";
+
     int tenp = floor(NumTime / 10);
     for (int i = 0; i < NumTime + 1; i++) {
         Press = VelocityVerlet(dt, i + 1);
@@ -189,7 +205,16 @@ void program() {
 
         Tavg += Temp;
         Pavg += Press;
+
+        // Write instantaneous values to ofp
+        ofp << "  " << setw(8) << fixed << setprecision(4) << i * dt * timefac
+                << "  " << setw(20) << fixed << setprecision(8) << Temp
+                << "  " << setw(20) << fixed << setprecision(8) << Press
+                << " " << setw(20) << fixed << setprecision(8) << KE
+                << "  " << setw(20) << fixed << setprecision(8) << PE
+                << "  " << setw(20) << fixed << setprecision(8) << KE + PE << "\n";
     }
+    ofp.close();
 
     // Because we have calculated the instantaneous temperature and pressure,
     // we can take the average over the whole simulation here
@@ -197,7 +222,7 @@ void program() {
     Tavg /= NumTime;
     Z = Pavg * (Vol * VolFac) / (N * kBSI * Tavg);
     gc = NA * Pavg * (Vol * VolFac) / (N * Tavg);
-    write_output(Pavg, Tavg, Z, gc, Vol, N, timefac, dt);
+    write_output(Pavg, Tavg, Z, gc, Vol, N, timefac, dt, ofn);
 }
 
 void initialize() {
@@ -500,7 +525,8 @@ int measure(const int num_threads, const string &output_file) {
     return 0;
 }
 
-int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt) {
+int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int N, double timefac, double dt,
+                 const string &ofn) {
     constexpr double VolFac = 3.7949992920124995e-29;
     constexpr int NumTime = 2000;
     if (ofstream outfile("simulation_output.txt"); outfile.is_open()) {
@@ -523,8 +549,10 @@ int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int 
         cout << "\n  THE COMPRESSIBILITY (unitless):          " << fixed << setprecision(5) << Z;
         cout << "\n  TOTAL VOLUME (m^3):                      " << fixed << setprecision(5) << Vol * VolFac;
         cout << "\n  NUMBER OF PARTICLES (unitless):          " << N;
-        cout << "\n  TOTAL TIME (s):                          " << fixed << setprecision(4) << NumTime * dt * timefac <<
-                "\n";
+        cout << "\n  TOTAL TIME (s):                          " << fixed << setprecision(4) << NumTime * dt * timefac
+                << "\n";
+        cout << "\n  TO ANALYZE INSTANTANEOUS DATA ABOUT YOUR MOLECULE, OPEN THE FILE \n  '" << ofn
+                << "' WITH YOUR FAVORITE TEXT EDITOR OR IMPORT THE DATA INTO EXCEL\n";
     } else {
         cerr << "Error: Could not open output file simulation_output.txt" << endl;
         return 1;
