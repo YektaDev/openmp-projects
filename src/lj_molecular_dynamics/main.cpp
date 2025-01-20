@@ -3,8 +3,8 @@
 #include <vector>
 #include <iomanip>
 #include <fstream>
-#include <numeric> // std::accumulate
-#include <algorithm> // std::min & std::max
+#include <numeric> // accumulate
+#include <algorithm> // min & max
 
 using namespace std;
 
@@ -70,10 +70,10 @@ int main(const int argc, char *argv[]) {
     }
 
     try {
-        const int num_threads = std::stoi(argv[1]);
+        const int num_threads = stoi(argv[1]);
         const string output_file = argv[2];
         return measure(num_threads, output_file);
-    } catch (const std::exception &e) {
+    } catch (const exception &e) {
         cerr << "Error: Invalid input arguments: " << e.what() << endl;
         return 1;
     }
