@@ -5,17 +5,91 @@
 #include <fstream>
 #include <numeric> // accumulate
 #include <algorithm> // min & max
+#include <cmath>
 
 using namespace std;
 
-void program() {
-    #pragma omp parallel default(none)
-    {
-        // TODO: TBD
-#pragma omp for
-        for (int i = 0; i < 10000000; ++i) {
-            // ... do some work ...
+// Structure to represent a particle
+struct Particle {
+    double x, y; // Position
+    double vx, vy; // Velocity
+    double fx, fy; // Force
+};
+
+// Function to calculate Lennard-Jones potential
+double lennardJonesPotential(double r, double epsilon, double sigma) {
+    double r6 = pow(sigma / r, 6);
+    double r12 = r6 * r6;
+    return 4 * epsilon * (r12 - r6);
+}
+
+// Function to calculate distance between two particles
+double calculateDistance(const Particle& p1, const Particle& p2) {
+    return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+}
+
+// Function to calculate forces between particles
+void calculateForces(vector<Particle>& particles, double epsilon, double sigma) {
+    const int num_particles = particles.size();
+
+    #pragma omp parallel for
+    for (int i = 0; i < num_particles; ++i) {
+        particles[i].fx = 0.0;
+        particles[i].fy = 0.0;
+        for (int j = 0; j < num_particles; ++j) {
+            if (i != j) {
+                double dist = calculateDistance(particles[i], particles[j]);
+                double r_inv = 1.0 / dist;
+                double r6_inv = pow(r_inv * sigma, 6);
+                double r12_inv = r6_inv * r6_inv;
+                double force_magnitude = 24 * epsilon * r_inv * (2 * r12_inv - r6_inv);
+
+                double dx = particles[i].x - particles[j].x;
+                double dy = particles[i].y - particles[j].y;
+                particles[i].fx += force_magnitude * dx * r_inv;
+                particles[i].fy += force_magnitude * dy * r_inv;
+            }
         }
+    }
+}
+
+// Function to update particle positions and velocities
+void updateParticles(vector<Particle>& particles, double dt) {
+    #pragma omp parallel for
+    for (int i = 0; i < particles.size(); ++i) {
+        // Update velocity
+        particles[i].vx += particles[i].fx * dt;
+        particles[i].vy += particles[i].fy * dt;
+
+        // Update position
+        particles[i].x += particles[i].vx * dt;
+        particles[i].y += particles[i].vy * dt;
+    }
+}
+
+void program() {
+    // Simulation parameters
+    const int num_particles = 100;
+    const double epsilon = 1.0;
+    const double sigma = 1.0;
+    const double dt = 0.001;
+    const int num_steps = 1000;
+
+    // Initialize particles
+    vector<Particle> particles(num_particles);
+    for (int i = 0; i < num_particles; ++i) {
+        particles[i].x = (double)rand() / RAND_MAX;
+        particles[i].y = (double)rand() / RAND_MAX;
+        particles[i].vx = 0.0;
+        particles[i].vy = 0.0;
+        particles[i].fx = 0.0;
+        particles[i].fy = 0.0;
+    }
+
+    // Simulation loop
+    for (int step = 0; step < num_steps; ++step) {
+        calculateForces(particles, epsilon, sigma);
+        updateParticles(particles, dt);
     }
 }
 
