@@ -5,6 +5,8 @@ import sys
 import numpy as np
 from scipy.interpolate import make_interp_spline
 
+THREADS_NUM = [1, 2, 4, 8, 16, 24, 32]
+
 def run_experiment(project_name, build_script, executable_name, num_threads_list, output_file, script_dir, benchmark_dir):
     """Runs the experiment for a given build and executable."""
     subprocess.run([os.path.join(script_dir, build_script), project_name], check=True, shell=False)
@@ -82,11 +84,22 @@ def plot_results(project_name, debug_file, release_file, benchmark_dir):
     plt.ylabel("Execution Time (seconds)", fontsize=12, fontweight='bold')
     plt.title(f"Execution Time vs. Number of Threads ({project_name})", fontsize=14, fontweight='bold')
 
-    plt.legend(fontsize=10, loc='upper left', frameon=True, shadow=True)
+    plt.legend(fontsize=10, loc='upper right', frameon=True, shadow=True)
     plt.grid(True, linestyle='--', alpha=0.7)
 
     # Customize tick parameters
     plt.tick_params(axis='both', which='major', labelsize=10, direction='inout', length=6, width=1)
+    # --- Use threads for x-ticks ---
+    plt.xticks(THREADS_NUM)
+    # --- Calculate y-tick positions ---
+    y_min = 0  # Or min(min(avg_times_smooth_debug), min(avg_times_smooth_release))
+    y_max = max(max(avg_times_smooth_debug), max(avg_times_smooth_release))  # Consider both debug and release
+    num_y_ticks = 10
+    # Calculate the step value to get exactly num_y_ticks
+    y_step = (y_max - y_min) / (num_y_ticks - 1)
+    # Create the y-tick positions
+    y_ticks = np.arange(y_min, y_max + y_step, y_step)
+    plt.yticks(y_ticks)
 
     # Add a light background color
     ax = plt.gca()
@@ -109,7 +122,6 @@ if __name__ == "__main__":
 
     project_name = sys.argv[1]
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    num_threads_list = [1, 2, 4, 8, 12, 16, 20, 24, 28, 32]
     debug_output_file = f"{project_name}_debug.txt"
     release_output_file = f"{project_name}_release.txt"
 
@@ -127,7 +139,7 @@ if __name__ == "__main__":
     if os.path.exists(release_file_path):
         os.remove(release_file_path)
 
-    run_experiment(project_name, "mac_debug.sh", "main-debug", num_threads_list, debug_output_file, script_dir, benchmark_dir)
-    run_experiment(project_name, "mac_release.sh", "main-release", num_threads_list, release_output_file, script_dir, benchmark_dir)
+    run_experiment(project_name, "mac_debug.sh", "main-debug", THREADS_NUM, debug_output_file, script_dir, benchmark_dir)
+    run_experiment(project_name, "mac_release.sh", "main-release", THREADS_NUM, release_output_file, script_dir, benchmark_dir)
 
     plot_results(project_name, debug_file_path, release_file_path, benchmark_dir)
