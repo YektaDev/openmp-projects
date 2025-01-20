@@ -12,8 +12,8 @@ void program() {
     #pragma omp parallel default(none)
     {
         // TODO: TBD
-        #pragma omp for
-        for (int i = 0; i < 1000000; ++i) {
+#pragma omp for
+        for (int i = 0; i < 10000000; ++i) {
             // ... do some work ...
         }
     }
