@@ -76,7 +76,7 @@ void initialize();
 // update positions and velocities using Velocity Verlet algorithm
 // print particle coordinates to file for rendering via VMD or other animation software
 // return 'instantaneous pressure'
-double VelocityVerlet(double dt, int iter);
+double VelocityVerlet(double dt);
 
 // Compute Force using F = -dV/dr
 // solve F = ma for use in Velocity Verlet
@@ -102,7 +102,6 @@ int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int 
                  const string &ofn);
 
 void program() {
-    double gc, Z;
     char prefix[1000], tfn[1000], ofn[1000], afn[1000];
 
     strcpy(prefix, "output");
@@ -180,7 +179,7 @@ void program() {
             "   time (s)            T(t) (K)             P(t) (Pa)           Kinetic En. (n.u.)     Potential En. (n.u.) Total En. (n.u.)\n";
 
     for (int i = 0; i < NumTime + 1; i++) {
-        double Press = VelocityVerlet(dt, i + 1);
+        double Press = VelocityVerlet(dt);
         Press *= PressFac;
 
         // Now we would like to calculate somethings about the system:
@@ -193,12 +192,6 @@ void program() {
 
         // Temperature from Kinetic Theory
         const double Temp = m * mvs / (3 * kB) * TempFac;
-
-        // Instantaneous gas constant and compressibility - not well defined because
-        // pressure may be zero in some instances because there will be zero wall collisions,
-        // pressure may be very high in some instances because there will be a number of collisions
-        gc = NA * Press * (Vol * VolFac) / (N * Temp);
-        Z = Press * (Vol * VolFac) / (N * kBSI * Temp);
 
         Tavg += Temp;
         Pavg += Press;
@@ -217,8 +210,8 @@ void program() {
     // we can take the average over the whole simulation here
     Pavg /= NumTime;
     Tavg /= NumTime;
-    Z = Pavg * (Vol * VolFac) / (N * kBSI * Tavg);
-    gc = NA * Pavg * (Vol * VolFac) / (N * Tavg);
+    const double Z = Pavg * (Vol * VolFac) / (N * kBSI * Tavg);
+    const double gc = NA * Pavg * (Vol * VolFac) / (N * Tavg);
     write_output(Pavg, Tavg, Z, gc, Vol, N, timefac, dt, ofn);
 }
 
@@ -343,9 +336,7 @@ void computeAccelerations() {
 }
 
 // returns sum of dv/dt*m/A (aka Pressure) from elastic collisions with walls
-double VelocityVerlet(double dt, int iter) {
-    int i, j, k;
-
+double VelocityVerlet(const double dt) {
     double psum = 0.;
 
     // Compute accelerations from forces at current position
@@ -353,10 +344,9 @@ double VelocityVerlet(double dt, int iter) {
     // Update positions and velocity with current velocity and acceleration
     //printf("  Updated Positions!\n");
 #pragma omp parallel for private(j)
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < 3; j++) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < 3; j++) {
             r[i][j] += v[i][j] * dt + 0.5 * a[i][j] * dt * dt;
-
             v[i][j] += 0.5 * a[i][j] * dt;
         }
         //printf("  %i  %6.4e   %6.4e   %6.4e\n",i,r[i][0],r[i][1],r[i][2]);
@@ -365,16 +355,16 @@ double VelocityVerlet(double dt, int iter) {
     computeAccelerations();
     // Update velocity with updated acceleration
 #pragma omp parallel for private(j)
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < 3; j++) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < 3; j++) {
             v[i][j] += 0.5 * a[i][j] * dt;
         }
     }
 
     // Elastic walls
 #pragma omp parallel for reduction(+:psum) private(j)
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < 3; j++) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < 3; j++) {
             if (r[i][j] < 0.) {
                 v[i][j] *= -1.; //- elastic walls
                 psum += 2 * m * fabs(v[i][j]) / dt; // contribution to pressure from "left" walls
