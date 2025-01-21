@@ -1,26 +1,26 @@
-#include<omp.h>
-#include<cstdio>
-#include<cstdlib>
-#include<cmath>
-#include<cstring>
+#include <omp.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
 
 // Number of particles
-int N;
+const int N = 216;
 
 // Lennard-Jones parameters in natural units!
-double sigma = 1.;
-double epsilon = 1.;
-double m = 1.;
-double kB = 1.;
+const double sigma = 1.;
+const double epsilon = 1.;
+const double m = 1.;
+const double kB = 1.;
 
-double NA = 6.022140857e23;
-double kBSI = 1.38064852e-23; // m^2*kg/(s^2*K)
+const double NA = 6.022140857e23;
+const double kBSI = 1.38064852e-23; // m^2*kg/(s^2*K)
 
 // Size of box, which will be specified in natural units
 double L;
 
 // Initial Temperature in Natural Units
-double Tinit; //2;
+const double Tinit = 0.728; // Example: 0.728 in natural units corresponds to 103.45 K for Argon
 // Vectors!
 //
 const int MAXPART = 5001;
@@ -34,7 +34,7 @@ double a[MAXPART][3];
 double F[MAXPART][3];
 
 // atom type
-char atype[10];
+const char atype[10] = "Ar"; // Example: Argon
 // Function prototypes
 // initialize positions on simple cubic lattice, also calls function to initialize velocities
 void initialize();
@@ -72,11 +72,43 @@ int main() {
     char prefix[1000], tfn[1000], ofn[1000], afn[1000];
     FILE *tfp, *ofp, *afp;
 
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("                  WELCOME TO WILLY P CHEM MD!\n");
-    printf("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("\n  ENTER A TITLE FOR YOUR CALCULATION!\n");
-    scanf("%s", prefix);
+    // Define constants based on the chosen atom type
+    if (strcmp(atype, "He") == 0) {
+        VolFac = 1.8399744000000005e-29;
+        PressFac = 8152287.336171632;
+        TempFac = 10.864459551225972;
+        timefac = 1.7572698825166272e-12;
+    } else if (strcmp(atype, "Ne") == 0) {
+        VolFac = 2.0570823999999997e-29;
+        PressFac = 27223022.27659913;
+        TempFac = 40.560648991243625;
+        timefac = 2.1192341945685407e-12;
+    } else if (strcmp(atype, "Ar") == 0) {
+        VolFac = 3.7949992920124995e-29;
+        PressFac = 51695201.06691862;
+        TempFac = 142.0950000000000;
+        timefac = 2.09618e-12;
+    } else if (strcmp(atype, "Kr") == 0) {
+        VolFac = 4.5882712000000004e-29;
+        PressFac = 59935428.40275003;
+        TempFac = 199.1817584391428;
+        timefac = 8.051563913585078e-13;
+    } else if (strcmp(atype, "Xe") == 0) {
+        VolFac = 5.4872e-29;
+        PressFac = 70527773.72794868;
+        TempFac = 280.30305642163006;
+        timefac = 9.018957925790732e-13;
+    } else {
+        // Default to Argon
+        VolFac = 3.7949992920124995e-29;
+        PressFac = 51695201.06691862;
+        TempFac = 142.0950000000000;
+        timefac = 2.09618e-12;
+        strcpy(atype, "Ar");
+    }
+
+    // Set simulation parameters
+    strcpy(prefix, "argon_simulation"); // Example title
     strcpy(tfn, prefix);
     strcat(tfn, "_traj.xyz");
     strcpy(ofn, prefix);
@@ -84,121 +116,9 @@ int main() {
     strcpy(afn, prefix);
     strcat(afn, "_average.txt");
 
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("                  TITLE ENTERED AS '%s'\n", prefix);
-    printf("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-
-    /*     Table of values for Argon relating natural units to SI units:
-     *     These are derived from Lennard-Jones parameters from the article
-     *     "Liquid argon: Monte carlo and molecular dynamics calculations"
-     *     J.A. Barker , R.A. Fisher & R.O. Watts
-     *     Mol. Phys., Vol. 21, 657-673 (1971)
-     *
-     *     mass:     6.633e-26 kg          = one natural unit of mass for argon, by definition
-     *     energy:   1.96183e-21 J      = one natural unit of energy for argon, directly from L-J parameters
-     *     length:   3.3605e-10  m         = one natural unit of length for argon, directly from L-J parameters
-     *     volume:   3.79499-29 m^3        = one natural unit of volume for argon, by length^3
-     *     time:     1.951e-12 s           = one natural unit of time for argon, by length*sqrt(mass/energy)
-     ***************************************************************************************/
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Edit these factors to be computed in terms of basic properties in natural units of
-    // the gas being simulated
-
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("  WHICH NOBLE GAS WOULD YOU LIKE TO SIMULATE? (DEFAULT IS ARGON)\n");
-    printf("\n  FOR HELIUM,  TYPE 'He' THEN PRESS 'return' TO CONTINUE\n");
-    printf("  FOR NEON,    TYPE 'Ne' THEN PRESS 'return' TO CONTINUE\n");
-    printf("  FOR ARGON,   TYPE 'Ar' THEN PRESS 'return' TO CONTINUE\n");
-    printf("  FOR KRYPTON, TYPE 'Kr' THEN PRESS 'return' TO CONTINUE\n");
-    printf("  FOR XENON,   TYPE 'Xe' THEN PRESS 'return' TO CONTINUE\n");
-    printf("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    scanf("%s", atype);
-
-    if (strcmp(atype, "He") == 0) {
-        VolFac = 1.8399744000000005e-29;
-        PressFac = 8152287.336171632;
-        TempFac = 10.864459551225972;
-        timefac = 1.7572698825166272e-12;
-        //strcpy(atype,"He");
-    } else if (strcmp(atype, "Ne") == 0) {
-        VolFac = 2.0570823999999997e-29;
-        PressFac = 27223022.27659913;
-        TempFac = 40.560648991243625;
-        timefac = 2.1192341945685407e-12;
-        //strcpy(atype,"Ne");
-    } else if (strcmp(atype, "Ar") == 0) {
-        VolFac = 3.7949992920124995e-29;
-        PressFac = 51695201.06691862;
-        TempFac = 142.0950000000000;
-        timefac = 2.09618e-12;
-        //strcpy(atype,"Ar");
-    } else if (strcmp(atype, "Kr") == 0) {
-        VolFac = 4.5882712000000004e-29;
-        PressFac = 59935428.40275003;
-        TempFac = 199.1817584391428;
-        timefac = 8.051563913585078e-13;
-        //strcpy(atype,"Kr");
-    } else if (strcmp(atype, "Xe") == 0) {
-        VolFac = 5.4872e-29;
-        PressFac = 70527773.72794868;
-        TempFac = 280.30305642163006;
-        timefac = 9.018957925790732e-13;
-        //strcpy(atype,"Xe");
-    } else {
-        VolFac = 3.7949992920124995e-29;
-        PressFac = 51695201.06691862;
-        TempFac = 142.0950000000000;
-        timefac = 2.09618e-12;
-        strcpy(atype, "Ar");
-    }
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("\n                     YOU ARE SIMULATING %s GAS! \n", atype);
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-
-    printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("\n  YOU WILL NOW ENTER A FEW SIMULATION PARAMETERS\n");
-    printf("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    printf("\n\n  ENTER THE INTIAL TEMPERATURE OF YOUR GAS IN KELVIN\n");
-    scanf("%lf", &Tinit);
-    // Make sure temperature is a positive number!
-    if (Tinit < 0.) {
-        printf(
-            "\n  !!!!! ABSOLUTE TEMPERATURE MUST BE A POSITIVE NUMBER!  PLEASE TRY AGAIN WITH A POSITIVE TEMPERATURE!!!\n");
-        exit(0);
-    }
-    // Convert initial temperature from kelvin to natural units
-    Tinit /= TempFac;
-
-    printf("\n\n  ENTER THE NUMBER DENSITY IN moles/m^3\n");
-    printf("  FOR REFERENCE, NUMBER DENSITY OF AN IDEAL GAS AT STP IS ABOUT 40 moles/m^3\n");
-    printf("  NUMBER DENSITY OF LIQUID ARGON AT 1 ATM AND 87 K IS ABOUT 35000 moles/m^3\n");
-
-    scanf("%lf", &rho);
-    N = 216;
+    rho = 40; // Example: 40 moles/m^3
     Vol = N / (rho * NA);
-
     Vol /= VolFac;
-
-    // Limiting N to MAXPART for practical reasons
-    if (N >= MAXPART) {
-        printf("\n\n\n  MAXIMUM NUMBER OF PARTICLES IS %i\n\n  PLEASE ADJUST YOUR INPUT FILE ACCORDINGLY \n\n",
-               MAXPART);
-        exit(0);
-    }
-    // Check to see if the volume makes sense - is it too small?
-    // Remember VDW radius of the particles is 1 natural unit of length
-    // and volume = L*L*L, so if V = N*L*L*L = N, then all the particles
-    // will be initialized with an interparticle separation equal to 2xVDW radius
-    if (Vol < N) {
-        printf("\n\n\n  YOUR DENSITY IS VERY HIGH!\n\n");
-        printf("  THE NUMBER OF PARTICLES IS %i AND THE AVAILABLE VOLUME IS %f NATURAL UNITS\n", N, Vol);
-        printf("  SIMULATIONS WITH DENSITY GREATER THAN 1 PARTCICLE/(1 Natural Unit of Volume) MAY DIVERGE\n");
-        printf("  PLEASE ADJUST YOUR INPUT FILE ACCORDINGLY AND RETRY\n\n");
-        exit(0);
-    }
-    // Vol = L*L*L;
-    // Length of the box in natural units:
     L = pow(Vol, (1. / 3));
 
     // Files that we can write different quantities to
