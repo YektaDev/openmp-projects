@@ -2,6 +2,7 @@
 #include<cstdlib>
 #include<cmath>
 #include<cstring>
+#include<omp.h>
 
 // Number of particles
 int N;
@@ -38,7 +39,7 @@ char atype[10];
 // initialize positions on simple cubic lattice, also calls function to initialize velocities
 void initialize();
 
-// update positions and velocities using Velocity Verlet algorithm 
+// update positions and velocities using Velocity Verlet algorithm
 // print particle coordinates to file for rendering via VMD or other animation software
 // return 'instantaneous pressure'
 double VelocityVerlet(double dt, int iter, FILE *fp);
@@ -71,7 +72,6 @@ int main() {
     char prefix[1000], tfn[1000], ofn[1000], afn[1000];
     FILE *tfp, *ofp, *afp;
 
-
     printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printf("                  WELCOME TO WILLY P CHEM MD!\n");
     printf("  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
@@ -102,9 +102,8 @@ int main() {
      ***************************************************************************************/
 
     // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Edit these factors to be computed in terms of basic properties in natural units of 
+    // Edit these factors to be computed in terms of basic properties in natural units of
     // the gas being simulated
-
 
     printf("\n  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     printf("  WHICH NOBLE GAS WOULD YOU LIKE TO SIMULATE? (DEFAULT IS ARGON)\n");
@@ -171,7 +170,6 @@ int main() {
     // Convert initial temperature from kelvin to natural units
     Tinit /= TempFac;
 
-
     printf("\n\n  ENTER THE NUMBER DENSITY IN moles/m^3\n");
     printf("  FOR REFERENCE, NUMBER DENSITY OF AN IDEAL GAS AT STP IS ABOUT 40 moles/m^3\n");
     printf("  NUMBER DENSITY OF LIQUID ARGON AT 1 ATM AND 87 K IS ABOUT 35000 moles/m^3\n");
@@ -230,7 +228,6 @@ int main() {
     // mass, and this will allow us to update their positions via Newton's law
     computeAccelerations();
 
-
     // Print number of particles to the trajectory file
     fprintf(tfp, "%i\n", N);
 
@@ -238,7 +235,6 @@ int main() {
     // The variables need to be set to zero initially
     Pavg = 0;
     Tavg = 0;
-
 
     int tenp = floor(NumTime / 10);
     fprintf(
@@ -258,7 +254,6 @@ int main() {
         else if (i == 9 * tenp) printf(" 90 |");
         else if (i == 10 * tenp) printf(" 100 ]\n");
         fflush(stdout);
-
 
         // This updates the positions and velocities using Newton's Laws
         // Also computes the Pressure as the sum of momentum changes from wall collisions / timestep
@@ -291,7 +286,7 @@ int main() {
                 KE + PE);
     }
 
-    // Because we have calculated the instantaneous temperature and pressure, 
+    // Because we have calculated the instantaneous temperature and pressure,
     // we can take the average over the whole simulation here
     Pavg /= NumTime;
     Tavg /= NumTime;
@@ -319,14 +314,12 @@ int main() {
     printf("\n  TOTAL VOLUME (m^3):                      %10.5e \n", Vol * VolFac);
     printf("\n  NUMBER OF PARTICLES (unitless):          %i \n", N);
 
-
     fclose(tfp);
     fclose(ofp);
     fclose(afp);
 
     return 0;
 }
-
 
 void initialize() {
     int n, p, i, j, k;
@@ -363,7 +356,7 @@ void initialize() {
     for (i=0; i<N; i++) {
       printf("  %6.3e  %6.3e  %6.3e\n",r[i][0],r[i][1],r[i][2]);
     }
- 
+
     printf("  Printing initial velocities!\n");
     for (i=0; i<N; i++) {
       printf("  %6.3e  %6.3e  %6.3e\n",v[i][0],v[i][1],v[i][2]);
@@ -371,14 +364,14 @@ void initialize() {
     */
 }
 
-
 // Function to calculate the averaged velocity squared
 double MeanSquaredVelocity() {
     double vx2 = 0;
     double vy2 = 0;
     double vz2 = 0;
-    double v2;
+    double v2 = 0;
 
+#pragma omp parallel for private(i) reduction(+:vx2,vy2,vz2)
     for (int i = 0; i < N; i++) {
         vx2 = vx2 + v[i][0] * v[i][0];
         vy2 = vy2 + v[i][1] * v[i][1];
@@ -386,37 +379,35 @@ double MeanSquaredVelocity() {
     }
     v2 = (vx2 + vy2 + vz2) / N;
 
-
     //printf("  Average of x-component of velocity squared is %f\n",v2);
     return v2;
 }
 
 // Function to calculate the kinetic energy of the system
 double Kinetic() {
-    //Write Function here!  
+    //Write Function here!
 
-    double v2, kin;
+    double v2_temp, kin = 0.;
 
-    kin = 0.;
+#pragma omp parallel for private(i,j,v2_temp) reduction(+:kin)
     for (int i = 0; i < N; i++) {
-        v2 = 0.;
+        v2_temp = 0.;
         for (int j = 0; j < 3; j++) {
-            v2 += v[i][j] * v[i][j];
+            v2_temp += v[i][j] * v[i][j];
         }
-        kin += m * v2 / 2.;
+        kin += m * v2_temp / 2.;
     }
 
     //printf("  Total Kinetic Energy is %f\n",N*mvs*m/2.);
     return kin;
 }
 
-
 // Function to calculate the potential energy of the system
 double Potential() {
-    double quot, r2, rnorm, term1, term2, Pot;
+    double quot, r2, rnorm, term1, term2, Pot = 0.;
     int i, j, k;
 
-    Pot = 0.;
+#pragma omp parallel for private(i,j,k,r2,rnorm,quot,term1,term2) reduction(+:Pot)
     for (i = 0; i < N; i++) {
         for (j = 0; j < N; j++) {
             if (j != i) {
@@ -437,22 +428,22 @@ double Potential() {
     return Pot;
 }
 
-
 // Uses the derivative of the Lennard-Jones potential to calculate
-// the forces on each atom.  Then uses a = F/m to calculate the
-// accelleration of each atom. 
+// the forces on each atom. Then uses a = F/m to calculate the
+// accelleration of each atom.
 void computeAccelerations() {
     int i, j, k;
     double f, rSqd;
     double rij[3]; // position of i relative to j
 
-
+#pragma omp parallel for private(i,k)
     for (i = 0; i < N; i++) {
         // set all accelerations to zero
         for (k = 0; k < 3; k++) {
             a[i][k] = 0;
         }
     }
+#pragma omp parallel for private(i,j,k,rSqd,rij,f)
     for (i = 0; i < N - 1; i++) {
         // loop over all distinct pairs i,j
         for (j = i + 1; j < N; j++) {
@@ -470,7 +461,9 @@ void computeAccelerations() {
             f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
             for (k = 0; k < 3; k++) {
                 // from F = ma, where m = 1 in natural units!
+#pragma omp atomic
                 a[i][k] += rij[k] * f;
+#pragma omp atomic
                 a[j][k] -= rij[k] * f;
             }
         }
@@ -487,6 +480,7 @@ double VelocityVerlet(double dt, int iter, FILE *fp) {
     computeAccelerations();
     // Update positions and velocity with current velocity and acceleration
     //printf("  Updated Positions!\n");
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             r[i][j] += v[i][j] * dt + 0.5 * a[i][j] * dt * dt;
@@ -498,6 +492,7 @@ double VelocityVerlet(double dt, int iter, FILE *fp) {
     // Update accellerations from updated positions
     computeAccelerations();
     // Update velocity with updated acceleration
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             v[i][j] += 0.5 * a[i][j] * dt;
@@ -505,6 +500,7 @@ double VelocityVerlet(double dt, int iter, FILE *fp) {
     }
 
     // Elastic walls
+#pragma omp parallel for private(i,j) reduction(+:psum)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             if (r[i][j] < 0.) {
@@ -518,6 +514,7 @@ double VelocityVerlet(double dt, int iter, FILE *fp) {
         }
     }
 
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         fprintf(fp, "%s", atype);
         for (j = 0; j < 3; j++) {
@@ -530,10 +527,10 @@ double VelocityVerlet(double dt, int iter, FILE *fp) {
     return psum / (6 * L * L);
 }
 
-
 void initializeVelocities() {
     int i, j;
 
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             // Pull a number from a Gaussian Distribution
@@ -545,12 +542,12 @@ void initializeVelocities() {
     // Compute center-of-mas velocity according to the formula above
     double vCM[3] = {0, 0, 0};
 
+#pragma omp parallel for private(i,j) reduction(+:vCM[:3])
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             vCM[j] += m * v[i][j];
         }
     }
-
 
     for (i = 0; i < 3; i++) vCM[i] /= N * m;
 
@@ -558,16 +555,17 @@ void initializeVelocities() {
     // velocity of each particle... effectively set the
     // center of mass velocity to zero so that the system does
     // not drift in space!
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             v[i][j] -= vCM[j];
         }
     }
 
-    // Now we want to scale the average velocity of the system 
+    // Now we want to scale the average velocity of the system
     // by a factor which is consistent with our initial temperature, Tinit
-    double vSqdSum, lambda;
-    vSqdSum = 0.;
+    double vSqdSum = 0., lambda;
+#pragma omp parallel for private(i,j) reduction(+:vSqdSum)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             vSqdSum += v[i][j] * v[i][j];
@@ -576,6 +574,7 @@ void initializeVelocities() {
 
     lambda = sqrt(3 * (N - 1) * Tinit / vSqdSum);
 
+#pragma omp parallel for private(i,j)
     for (i = 0; i < N; i++) {
         for (j = 0; j < 3; j++) {
             v[i][j] *= lambda;
