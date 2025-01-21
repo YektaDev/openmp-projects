@@ -56,7 +56,7 @@ vector<vector<int> > generateMatrix(int rows, int cols, int seed) {
     return matrix;
 }
 
-void program() {
+void program(const string &output_file) {
     // Call multiplyMatrices() within a try-catch block to handle potential errors
     try {
         const vector<vector<int> > result = multiplyMatrices(matrixA, matrixB);
@@ -72,6 +72,18 @@ void program() {
             }
         } else {
             cout << "Resultant Matrix Size: " << elements << endl;
+            // Save the result to a file
+            if (ofstream outfile(output_file); outfile.is_open()) {
+                for (const auto &row: result) {
+                    for (const int val: row) {
+                        outfile << val << " ";
+                    }
+                    outfile << endl;
+                }
+                outfile.close();
+            } else {
+                cerr << "Error: Could not open output file " << output_file << endl;
+            }
         }
     } catch (const runtime_error &error) {
         cerr << error.what() << endl;
@@ -88,13 +100,13 @@ int measure(const int num_threads, const string &output_file) {
 
     // Warm-up
     for (int i = 0; i < warmups; i++) {
-        program();
+        program("discard_warmup.txt");
     }
 
     // Measurement
     for (int i = 0; i < runs; i++) {
         const double start_time = omp_get_wtime();
-        program();
+        program("result_matrix.txt");
         const double end_time = omp_get_wtime();
         exec_times.push_back(end_time - start_time);
     }
