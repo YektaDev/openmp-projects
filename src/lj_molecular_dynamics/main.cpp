@@ -258,34 +258,34 @@ double MeanSquaredVelocity() {
 // Function to calculate the kinetic energy of the system
 double Kinetic() {
     double kin = 0.;
+    double v2;
 #pragma omp parallel for reduction(+:kin) private(v2)
     for (int i = 0; i < N; i++) {
-        double v2 = 0.;
+        v2 = 0.;
         for (int j = 0; j < 3; j++) {
             v2 += v[i][j] * v[i][j];
         }
         kin += m * v2 / 2.;
     }
-
-    //printf("  Total Kinetic Energy is %f\n",N*mvs*m/2.);
     return kin;
 }
 
 // Function to calculate the potential energy of the system
 double Potential() {
     double Pot = 0.;
+    double r2, rnorm, quot, term1, term2;
 #pragma omp parallel for reduction(+:Pot) private(r2, rnorm, quot, term1, term2)
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             if (j != i) {
-                double r2 = 0.;
+                r2 = 0.;
                 for (int k = 0; k < 3; k++) {
                     r2 += (r[i][k] - r[j][k]) * (r[i][k] - r[j][k]);
                 }
-                const double rnorm = sqrt(r2);
-                const double quot = sigma / rnorm;
-                const double term1 = pow(quot, 12.);
-                const double term2 = pow(quot, 6.);
+                rnorm = sqrt(r2);
+                quot = sigma / rnorm;
+                term1 = pow(quot, 12.);
+                term2 = pow(quot, 6.);
 
                 Pot += 4 * epsilon * (term1 - term2);
             }
@@ -299,8 +299,9 @@ double Potential() {
 //  the forces on each atom. Then uses a = F/m to calculate the
 //  accelleration of each atom.
 void computeAccelerations() {
-    int i, k;
+    int i, k, j;
     double rij[3]; // position of i relative to j
+    double rSqd, f;
 
     for (i = 0; i < N; i++) {
         // set all accelerations to zero
@@ -311,9 +312,9 @@ void computeAccelerations() {
 #pragma omp parallel for private(j, rSqd, rij, f)
     for (i = 0; i < N - 1; i++) {
         // loop over all distinct pairs i,j
-        for (int j = i + 1; j < N; j++) {
+        for (j = i + 1; j < N; j++) {
             // initialize r^2 to zero
-            double rSqd = 0;
+            rSqd = 0;
 
             for (k = 0; k < 3; k++) {
                 // component-by-componenent position of i relative to j
@@ -323,7 +324,7 @@ void computeAccelerations() {
             }
 
             // From derivative of Lennard-Jones with sigma and epsilon set equal to 1 in natural units!
-            const double f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
+            f = 24 * (2 * pow(rSqd, -7) - pow(rSqd, -4));
             for (k = 0; k < 3; k++) {
                 // from F = ma, where m = 1 in natural units!
 #pragma omp atomic
@@ -338,6 +339,7 @@ void computeAccelerations() {
 // returns sum of dv/dt*m/A (aka Pressure) from elastic collisions with walls
 double VelocityVerlet(const double dt) {
     double psum = 0.;
+    int j;
 
     // Compute accelerations from forces at current position
     computeAccelerations();
@@ -345,7 +347,7 @@ double VelocityVerlet(const double dt) {
     //printf("  Updated Positions!\n");
 #pragma omp parallel for private(j)
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < 3; j++) {
+        for (j = 0; j < 3; j++) {
             r[i][j] += v[i][j] * dt + 0.5 * a[i][j] * dt * dt;
             v[i][j] += 0.5 * a[i][j] * dt;
         }
@@ -356,7 +358,7 @@ double VelocityVerlet(const double dt) {
     // Update velocity with updated acceleration
 #pragma omp parallel for private(j)
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < 3; j++) {
+        for (j = 0; j < 3; j++) {
             v[i][j] += 0.5 * a[i][j] * dt;
         }
     }
@@ -364,7 +366,7 @@ double VelocityVerlet(const double dt) {
     // Elastic walls
 #pragma omp parallel for reduction(+:psum) private(j)
     for (int i = 0; i < N; i++) {
-        for (int j = 0; j < 3; j++) {
+        for (j = 0; j < 3; j++) {
             if (r[i][j] < 0.) {
                 v[i][j] *= -1.; //- elastic walls
                 psum += 2 * m * fabs(v[i][j]) / dt; // contribution to pressure from "left" walls
