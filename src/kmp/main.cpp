@@ -19,7 +19,7 @@ const string pat =
         "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm";
 
 // Fills lps array for given pattern pat[0..m-1]
-void computeLPSArray(const string &pat, vector<int> &lps, const int m) {
+void computeLpsArray(const string &pat, vector<int> &lps, const int m) {
     // length of the previous longest prefix suffix
     int len = 0;
 
@@ -48,7 +48,7 @@ void computeLPSArray(const string &pat, vector<int> &lps, const int m) {
 }
 
 // Finds occurrences of pat in txt
-void KMPSearch(const string &txt, const string &pat) {
+vector<int> kmpSearch(const string &txt, const string &pat) {
     const int m = pat.size();
     const int n = txt.size();
 
@@ -56,10 +56,11 @@ void KMPSearch(const string &txt, const string &pat) {
     vector<int> lps(m);
 
     // Preprocess the pattern (calculate lps array)
-    computeLPSArray(pat, lps, m);
+    computeLpsArray(pat, lps, m);
 
     int i = 0; // index for txt
     int j = 0; // index for pat
+    vector<int> occurrences;
 
     while (n - i >= m - j) {
         if (pat[j] == txt[i]) {
@@ -67,7 +68,7 @@ void KMPSearch(const string &txt, const string &pat) {
             i++;
         }
         if (j == m) {
-            cout << "Found pattern at index " << i - j << endl;
+            occurrences.push_back(i - j);
             j = lps[j - 1];
         }
         // Mismatch after j matches
@@ -77,10 +78,16 @@ void KMPSearch(const string &txt, const string &pat) {
             else i = i + 1;
         }
     }
+    return occurrences;
 }
 
 void program() {
-    KMPSearch(longTxt, pat);
+    const vector<int> occurrences = kmpSearch(longTxt, pat);
+    cout << "Found pattern at indices: ";
+    for (int i = 0; i < occurrences.size(); ++i) {
+        cout << occurrences[i] << (i == occurrences.size() - 1 ? "" : ", ");
+    }
+    cout << endl;
 }
 
 int measure(const int num_threads, const string &output_file) {
