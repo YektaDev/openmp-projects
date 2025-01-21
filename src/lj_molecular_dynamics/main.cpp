@@ -40,6 +40,8 @@
 
 using namespace std;
 
+constexpr int NUM_ITERATIONS = 1000;
+
 // Number of particles
 constexpr int N = 216;
 
@@ -543,17 +545,16 @@ int measure(const int num_threads, const int num_iterations, const string &outpu
     return 0;
 }
 
-int main(const int argc, char *argv[]) {
-    if (argc != 4) {
-        cerr << "Usage: " << argv[0] << " <num_threads> <num_iterations> <output_file>\n";
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        cerr << "Usage: " << argv[0] << " <num_threads> <output_file>\n";
         return 1;
     }
 
     try {
         const int num_threads = stoi(argv[1]);
-        const int num_iterations = stoi(argv[2]);
-        const string output_file = argv[3];
-        return measure(num_threads, num_iterations, output_file);
+        const string output_file = argv[2];
+        return measure(num_threads, NUM_ITERATIONS, output_file);
     } catch (const exception &e) {
         cerr << "Error: Invalid input arguments: " << e.what() << endl;
         return 1;
