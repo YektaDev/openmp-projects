@@ -555,7 +555,7 @@ int main(int argc, char *argv[]) {
     try {
         const int num_threads = stoi(argv[1]);
         const string output_file = argv[2];
-        return measure(num_threads, NUM_ITERATIONS, output_file);
+        return measure(num_threads, output_file);
     } catch (const exception &e) {
         cerr << "Error: Invalid input arguments: " << e.what() << endl;
         return 1;
