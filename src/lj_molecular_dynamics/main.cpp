@@ -500,7 +500,7 @@ double gaussdist() {
     }
 }
 
-int measure(const int num_threads, const int num_iterations, const string &output_file) {
+int measure(const int num_threads, const string &output_file) {
     omp_set_num_threads(num_threads);
 
     constexpr int warmups = 3;
@@ -510,13 +510,15 @@ int measure(const int num_threads, const int num_iterations, const string &outpu
 
     // Warm-up
     for (int i = 0; i < warmups; i++) {
-        program(num_iterations);
+        cout << "Warm-up Round " << i + 1 << "/" << warmups << " with " << num_threads << " threads\n";
+        program(NUM_ITERATIONS);
     }
 
     // Measurement
     for (int i = 0; i < runs; i++) {
+        cout << "Round " << i + 1 << "/" << runs << " with " << num_threads << " threads\n";
         const double start_time = omp_get_wtime();
-        program(num_iterations);
+        program(NUM_ITERATIONS);
         const double end_time = omp_get_wtime();
         exec_times.push_back(end_time - start_time);
     }
@@ -532,7 +534,6 @@ int measure(const int num_threads, const int num_iterations, const string &outpu
     // Write output to file
     if (ofstream outfile(output_file, ios::app); outfile.is_open()) {
         outfile << num_threads << " "
-                << num_iterations << " "
                 << fixed << setprecision(6) << average << " "
                 << fixed << setprecision(6) << min_time << " "
                 << fixed << setprecision(6) << max_time << " "
