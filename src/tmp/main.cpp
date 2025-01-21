@@ -34,7 +34,7 @@ double a[MAXPART][3];
 double F[MAXPART][3];
 
 // atom type
-const char atype[10] = "Ar"; // Example: Argon
+const char atype[10] = "Ar";
 // Function prototypes
 // initialize positions on simple cubic lattice, also calls function to initialize velocities
 void initialize();
@@ -104,11 +104,10 @@ int main() {
         PressFac = 51695201.06691862;
         TempFac = 142.0950000000000;
         timefac = 2.09618e-12;
-        strcpy(atype, "Ar");
     }
 
     // Set simulation parameters
-    strcpy(prefix, "argon_simulation"); // Example title
+    strcpy(prefix, "argon_md");
     strcpy(tfn, prefix);
     strcat(tfn, "_traj.xyz");
     strcpy(ofn, prefix);
