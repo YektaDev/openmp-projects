@@ -29,11 +29,13 @@ int measure(const int num_threads, const string &output_file) {
 
     // Warm-up
     for (int i = 0; i < warmups; i++) {
+        cout << "Warm-up Round " << i + 1 << "/" << warmups << " with " << num_threads << " threads\n";
         program();
     }
 
     // Measurement
     for (int i = 0; i < runs; i++) {
+        cout << "Round " << i + 1 << "/" << runs << " with " << num_threads << " threads\n";
         const double start_time = omp_get_wtime();
         program();
         const double end_time = omp_get_wtime();
