@@ -8,15 +8,76 @@
 
 using namespace std;
 
-void program() {
-    #pragma omp parallel default(none)
-    {
-        // TODO: TBD
-        #pragma omp for
-        for (int i = 0; i < 1000000; ++i) {
-            // ... do some work ...
+const string txt = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm________";
+const string longTxt = txt + txt + txt + txt + txt + txt + txt;
+const string pat = "qwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnmqwertyuiopasdfghjklzxcvbnm";
+
+// Fills lps array for given pattern pat[0..m-1]
+void computeLPSArray(const string &pat, vector<int> &lps, const int m) {
+    // length of the previous longest prefix suffix
+    int len = 0;
+
+    lps[0] = 0; // lps[0] is always 0
+
+    // the loop calculates lps[i] for i = 1 to m-1
+    int i = 1;
+    while (i < m) {
+        if (pat[i] == pat[len]) {
+            len++;
+            lps[i] = len;
+            i++;
+        } else // (pat[i] != pat[len])
+        {
+            //  The idea is similar to search step.
+            if (len != 0) {
+                len = lps[len - 1];
+                // Also, note that we do not increment i here
+            } else // if (len == 0)
+            {
+                lps[i] = 0;
+                i++;
+            }
         }
     }
+}
+
+// Finds occurrences of pat in txt
+void KMPSearch(const string &txt, const string &pat) {
+    const int m = pat.size();
+    const int n = txt.size();
+
+    // create lps array that will hold the longest prefix suffix values for pattern
+    vector<int> lps(m);
+
+    // Preprocess the pattern (calculate lps array)
+    computeLPSArray(pat, lps, m);
+
+    int i = 0; // index for txt
+    int j = 0; // index for pat
+
+    while (n - i >= m - j) {
+        if (pat[j] == txt[i]) {
+            j++;
+            i++;
+        }
+        if (j == m) {
+            cout << "Found pattern at index " << i - j << endl;
+            j = lps[j - 1];
+        }
+        // mismatch after j matches
+        else if (i < n && pat[j] != txt[i]) {
+            // Do not match lps[0..lps[j-1]] characters, they will match anyway
+            if (j != 0) {
+                j = lps[j - 1];
+            } else {
+                i = i + 1;
+            }
+        }
+    }
+}
+
+void program() {
+    KMPSearch(longTxt, pat);
 }
 
 int measure(const int num_threads, const string &output_file) {
