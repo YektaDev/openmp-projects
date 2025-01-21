@@ -104,7 +104,7 @@ int write_output(double Pavg, double Tavg, double Z, double gc, double Vol, int 
 void program() {
     char prefix[1000], tfn[1000], ofn[1000], afn[1000];
 
-    strcpy(prefix, "output");
+    strcpy(prefix, "md");
     strcpy(tfn, prefix);
     strcat(tfn, "_traj.xyz");
     strcpy(ofn, prefix);
