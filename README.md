@@ -2,12 +2,12 @@
 
 ## Knuth–Morris–Pratt Algorithm
 
-![kmp.png](./benchmark/kmp.png)
+![kmp.png](res/kmp.png)
 
 ## Molecular Dynamics Simulation (Lennard Jones Potential)
 
-![lj_molecular_dynamics.png](./benchmark/lj_molecular_dynamics.png)
+![lj_molecular_dynamics.png](res/lj_molecular_dynamics.png)
 
 ## Matrix Multiplication
 
-![matrix_multiplication.png](./benchmark/matrix_multiplication.png)
+![matrix_multiplication.png](res/matrix_multiplication.png)
