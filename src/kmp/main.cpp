@@ -58,27 +58,60 @@ vector<int> kmpSearch(const string &txt, const string &pat) {
     // Preprocess the pattern (calculate lps array)
     computeLpsArray(pat, lps, m);
 
-    int i = 0; // index for txt
-    int j = 0; // index for pat
-    vector<int> occurrences;
+    vector<int> all_occurrences;
 
-    while (n - i >= m - j) {
-        if (pat[j] == txt[i]) {
-            j++;
-            i++;
+    #pragma omp parallel
+    {
+        vector<int> local_occurrences;
+        const int num_threads = omp_get_num_threads();
+        const int thread_id = omp_get_thread_num();
+
+        // Calculate chunk size and overlap
+        const int chunk_size = n / num_threads;
+        const int overlap = m - 1;
+
+        // Calculate start and end indices for each thread
+        int start = thread_id * chunk_size;
+        int end = (thread_id == num_threads - 1) ? n : start + chunk_size + overlap;
+
+        // Adjust start for threads other than the first to avoid missing occurrences at chunk boundaries
+        if (thread_id != 0) {
+            start -= overlap;
         }
-        if (j == m) {
-            occurrences.push_back(i - j);
-            j = lps[j - 1];
+
+        int i = start; // index for txt
+        int j = 0;     // index for pat
+
+        while (i < end && n - i >= m - j) {
+            if (pat[j] == txt[i]) {
+                j++;
+                i++;
+            }
+            if (j == m) {
+                const int occurrence_index = i - j;
+                // Check if the occurrence is within the thread's main chunk (not just the overlap)
+                if (occurrence_index >= thread_id * chunk_size && occurrence_index < (thread_id + 1) * chunk_size) {
+                    local_occurrences.push_back(occurrence_index);
+                }
+                j = lps[j - 1];
+            }
+            // Mismatch after j matches
+            else if (i < end && pat[j] != txt[i]) {
+                // Do not match lps[0..lps[j-1]] characters, they will match anyway
+                if (j != 0) j = lps[j - 1];
+                else i = i + 1;
+            }
         }
-        // Mismatch after j matches
-        else if (i < n && pat[j] != txt[i]) {
-            // Do not match lps[0..lps[j-1]] characters, they will match anyway
-            if (j != 0) j = lps[j - 1];
-            else i = i + 1;
+
+        // Merge local occurrences into the global vector
+        #pragma omp critical
+        {
+            all_occurrences.insert(all_occurrences.end(), local_occurrences.begin(), local_occurrences.end());
         }
     }
-    return occurrences;
+
+    sort(all_occurrences.begin(), all_occurrences.end());
+    return all_occurrences;
 }
 
 void program() {
