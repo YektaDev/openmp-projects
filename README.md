@@ -11,3 +11,5 @@
 ## Matrix Multiplication
 
 ![matrix_multiplication.png](res/matrix_multiplication.png)
+
+> Take the project with a grain of salt, it's a quick attempt.
